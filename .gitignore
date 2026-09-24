@@ -1,0 +1,11 @@
+# Godot 4 generated files
+.godot/
+/android/
+
+# Build output (exported APKs etc.) — large & regenerable
+/build/
+*.tmp
+
+# Editor / OS
+.DS_Store
+*.swp
