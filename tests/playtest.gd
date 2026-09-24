@@ -3,7 +3,8 @@ extends Node2D
 ## Headless end-to-end playtest: builds the real PlayScreen, then a bot plays one full round of
 ## every Addition level through the actual tap flow — tap the card, wait for the flip, press
 ## ✓ or ✗ at random — checking the counter, button states, the summary score and that Stats
-## recorded every answer. Uses a throwaway profile so real progress isn't touched. Run with:
+## recorded every answer. It also walks the two-page menu (categories → levels → round → back).
+## Uses a throwaway profile so real progress isn't touched. Run with:
 ##   godot --headless --path . res://tests/Playtest.tscn
 ## Prints PLAYTEST PASSED / FAILED; exit code = number of failing checks.
 
@@ -12,6 +13,7 @@ const MAX_SETTLE_FRAMES := 300
 var _failures := 0
 var _checks := 0
 var _play: PlayScreen
+var _menu: MenuScreen
 
 func _check(cond: bool, msg: String) -> void:
 	_checks += 1
@@ -24,11 +26,14 @@ func _ready() -> void:
 	Stats.clear()
 	var layer := CanvasLayer.new()
 	add_child(layer)
+	_menu = MenuScreen.new()
+	layer.add_child(_menu)
 	_play = PlayScreen.new()
 	layer.add_child(_play)
 	_run.call_deferred()
 
 func _run() -> void:
+	_check_menu()
 	for n in range(1, Categories.level_count(&"addition") + 1):
 		await _play_level(n)
 	Stats.clear()
@@ -64,6 +69,23 @@ func _play_level(n: int) -> void:
 	_check(after["right"] - before["right"] == expected_score, "L%d: Stats counted every ✓" % n)
 	_check(after["wrong"] - before["wrong"] == total - expected_score, "L%d: Stats counted every ✗" % n)
 	print("level %d: %d / %d" % [n, expected_score, total])
+	GameState.to_menu()
+	_check(_menu.category_id == &"addition", "L%d: leaving a round lands on its category's levels" % n)
+
+## The top page lists categories; a category button opens its levels; Back returns.
+func _check_menu() -> void:
+	GameState.level_cfg = {}
+	GameState.to_menu()
+	var buttons := _menu._list.get_children()
+	_check(_menu.category_id.is_empty(), "menu opens on the category page")
+	_check(buttons.size() == Categories.DATA.size(), "one button per category")
+	_check(not _menu._back.visible, "no Back button on the top page")
+	(buttons[0] as Button).pressed.emit()
+	_check(_menu.category_id == &"addition", "the Addition button opens Addition")
+	_check(_menu._list.get_child_count() == Categories.level_count(&"addition"), "one button per level")
+	_check(_menu._back.visible, "the level page has a Back button")
+	_menu._back.pressed.emit()
+	_check(_menu.category_id.is_empty(), "Back returns to the category page")
 
 ## Wait for the flip to finish (bounded so a hang fails instead of freezing).
 func _settle() -> void:

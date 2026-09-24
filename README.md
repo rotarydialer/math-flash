@@ -37,7 +37,7 @@ supporting more students just needs a picker that sets `Stats.profile_id`.
 | `scripts/round.gd` | Pure model of one round: the deck, the current card, and the results |
 | `scripts/game_state.gd` | Autoload: which screen is up, the current round, and the signals |
 | `scripts/stats.gd` | Autoload: per-profile, per-fact answer history |
-| `scripts/menu_screen.gd` | Level picker |
+| `scripts/menu_screen.gd` | Two-page picker: categories, then that category's levels |
 | `scripts/play_screen.gd` | Card, ✗ / ✓ buttons, and the end-of-round summary |
 | `scripts/card.gd`, `scripts/answer_button.gd` | Placeholder art drawn in code |
 | `scripts/ui_theme.gd` | Shared button and label styling |

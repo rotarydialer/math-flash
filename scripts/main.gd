@@ -1,7 +1,8 @@
 extends Node2D
 
 ## Root scene wiring: builds the menu and play screens in code and shows whichever one
-## GameState says is up.
+## GameState says is up. Android's back gesture steps up a screen: round → levels →
+## categories → quit.
 
 const Config := preload("res://data/config.gd")
 
@@ -23,3 +24,13 @@ func _ready() -> void:
 func _show(screen: Control) -> void:
 	_menu.visible = screen == _menu
 	_play.visible = screen == _play
+
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
+		return
+	if _play.visible:
+		GameState.to_menu()
+	elif not _menu.category_id.is_empty():
+		_menu.show_categories()
+	else:
+		get_tree().quit()
