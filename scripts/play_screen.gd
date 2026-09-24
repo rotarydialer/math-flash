@@ -9,7 +9,6 @@ const Config := preload("res://data/config.gd")
 var _title: Label
 var _counter: Label
 var _card: FlashCard
-var _hint: Label
 var _wrong_btn: AnswerButton
 var _right_btn: AnswerButton
 var _overlay: Control
@@ -25,8 +24,6 @@ func _ready() -> void:
 	_card = FlashCard.new()
 	add_child(_card)
 	_card.flipped.connect(_on_flipped)
-	_hint = _make_label("Tap the card to check", 28, Vector2(0, Config.CARD_CENTER_Y + Config.CARD_SIZE.y / 2 + 40))
-	_hint.modulate.a = 0.6
 	_wrong_btn = _make_answer_button(false, Config.VIEWPORT_W * 0.28)
 	_right_btn = _make_answer_button(true, Config.VIEWPORT_W * 0.72)
 	_build_overlay()
@@ -116,11 +113,9 @@ func _on_round_started(level_cfg: Dictionary, _total: int) -> void:
 func _on_card_shown(problem: Dictionary, index: int, total: int) -> void:
 	_counter.text = "%d / %d" % [index + 1, total]
 	_card.show_problem(problem)
-	_hint.visible = true
 	_set_answer_buttons(false)
 
 func _on_flipped() -> void:
-	_hint.visible = false
 	_set_answer_buttons(true)
 
 func _on_answer(correct: bool) -> void:
