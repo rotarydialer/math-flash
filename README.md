@@ -2,7 +2,7 @@
 
 Math flash cards for Android, made in Godot 4.6 for homeschool practice (portrait, touch).
 
-Pick a level. A card shows a problem: tap it and it flips over to show the answer. Then tap
+Pick a category and a level. A card shows a problem: tap it and it flips over to show the answer. Then tap
 ✗ or ✓ to say whether you got it, and the next card comes up. A round is 20 cards and ends with
 your score and a list of the facts to practise. Every answer is saved per fact, so the app can
 later work out what needs more practice.
@@ -15,10 +15,17 @@ later work out what needs more practice.
 | | 2 | Sums to 10 |
 | | 3 | Both numbers 0–10 (up to 10 + 10) |
 | | 4 | Two digits + one digit, no carrying (e.g. 23 + 4) |
+| Subtraction | 1 | From 5 or less (5 − 0 … 0 − 0) |
+| | 2 | From 10 or less |
+| | 3 | Up to 20 − 10, answers 0–10 (reverse of Addition 3) |
+| | 4 | Two digits − one digit, no borrowing (e.g. 47 − 3) |
+
+Answers are never negative.
 
 Levels are defined in `data/categories.gd` by their operand ranges plus optional
-`max_result` / `no_regroup` filters. To add a new category (subtraction, multiplication, …), add
-an entry there and its operator in `Problems.answer`. The menu picks it up automatically.
+`max_result` / `no_regroup` filters. To add a new category (multiplication, …), add an entry
+there and its operator in `Problems.answer` / `Problems.SYMBOLS`. The menu picks it up
+automatically.
 
 ## Stats & profiles
 
@@ -54,8 +61,9 @@ godot --headless --path . --import
 ```sh
 godot --path .                  # play
 godot --path . -- --level=3     # jump straight into Addition level 3
+godot --path . -- --category=subtraction --level=2   # ...or another category's level
 godot --headless --path . --script res://tests/test_problems.gd   # logic tests
-godot --headless --path . res://tests/Playtest.tscn               # bot plays a round of every level
+godot --headless --path . res://tests/Playtest.tscn               # bot plays a round of every level of every category
 ```
 
 ## Phone (Android)

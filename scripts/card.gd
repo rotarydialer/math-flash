@@ -62,7 +62,7 @@ func _gui_input(event: InputEvent) -> void:
 		flip()
 
 func question_text() -> String:
-	return "%d %s %d" % [problem["a"], problem["op"], problem["b"]]
+	return Problems.text(problem)
 
 func _draw() -> void:
 	if problem.is_empty():

@@ -1,7 +1,7 @@
 extends Node2D
 
 ## Headless end-to-end playtest: builds the real PlayScreen, then a bot plays one full round of
-## every Addition level through the actual tap flow — tap the card, wait for the flip, press
+## every level in every category through the actual tap flow — tap the card, wait for the flip, press
 ## ✓ or ✗ at random — checking the counter, button states, the summary score and that Stats
 ## recorded every answer. It also walks the two-page menu (categories → levels → round → back).
 ## Uses a throwaway profile so real progress isn't touched. Run with:
@@ -34,15 +34,16 @@ func _ready() -> void:
 
 func _run() -> void:
 	_check_menu()
-	for n in range(1, Categories.level_count(&"addition") + 1):
-		await _play_level(n)
+	for cat in Categories.DATA:
+		for n in range(1, Categories.level_count(cat["id"]) + 1):
+			await _play_level(cat["id"], n)
 	Stats.clear()
 	print("Checks: %d  Failures: %d" % [_checks, _failures])
 	print("PLAYTEST PASSED" if _failures == 0 else "PLAYTEST FAILED")
 	get_tree().quit(_failures)
 
-func _play_level(n: int) -> void:
-	GameState.start_round(&"addition", n)
+func _play_level(category_id: StringName, n: int) -> void:
+	GameState.start_round(category_id, n)
 	var cfg := GameState.level_cfg
 	var total := GameState.current_round.size()
 	var before: Dictionary = Stats.level_summary(cfg)
@@ -68,24 +69,25 @@ func _play_level(n: int) -> void:
 	var after: Dictionary = Stats.level_summary(cfg)
 	_check(after["right"] - before["right"] == expected_score, "L%d: Stats counted every ✓" % n)
 	_check(after["wrong"] - before["wrong"] == total - expected_score, "L%d: Stats counted every ✗" % n)
-	print("level %d: %d / %d" % [n, expected_score, total])
+	print("%s level %d: %d / %d" % [category_id, n, expected_score, total])
 	GameState.to_menu()
-	_check(_menu.category_id == &"addition", "L%d: leaving a round lands on its category's levels" % n)
+	_check(_menu.category_id == category_id, "L%d: leaving a round lands on its category's levels" % n)
 
 ## The top page lists categories; a category button opens its levels; Back returns.
 func _check_menu() -> void:
 	GameState.level_cfg = {}
 	GameState.to_menu()
-	var buttons := _menu._list.get_children()
 	_check(_menu.category_id.is_empty(), "menu opens on the category page")
-	_check(buttons.size() == Categories.DATA.size(), "one button per category")
+	_check(_menu._list.get_child_count() == Categories.DATA.size(), "one button per category")
 	_check(not _menu._back.visible, "no Back button on the top page")
-	(buttons[0] as Button).pressed.emit()
-	_check(_menu.category_id == &"addition", "the Addition button opens Addition")
-	_check(_menu._list.get_child_count() == Categories.level_count(&"addition"), "one button per level")
-	_check(_menu._back.visible, "the level page has a Back button")
-	_menu._back.pressed.emit()
-	_check(_menu.category_id.is_empty(), "Back returns to the category page")
+	for i in Categories.DATA.size():
+		var cat: Dictionary = Categories.DATA[i]
+		(_menu._list.get_child(i) as Button).pressed.emit()
+		_check(_menu.category_id == cat["id"], "the %s button opens %s" % [cat["name"], cat["name"]])
+		_check(_menu._list.get_child_count() == Categories.level_count(cat["id"]), "%s: one button per level" % cat["name"])
+		_check(_menu._back.visible, "%s: the level page has a Back button" % cat["name"])
+		_menu._back.pressed.emit()
+		_check(_menu.category_id.is_empty(), "%s: Back returns to the category page" % cat["name"])
 
 ## Wait for the flip to finish (bounded so a hang fails instead of freezing).
 func _settle() -> void:

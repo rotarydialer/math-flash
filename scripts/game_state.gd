@@ -15,22 +15,27 @@ const Config := preload("res://data/config.gd")
 var state: int = State.MENU
 var level_cfg: Dictionary = {}
 var current_round: FlashRound
-## Level to open straight into at boot, from `-- --level=N` (0 = show the menu).
+## Level to open straight into at boot, from `-- --level=N` (0 = show the menu), in the
+## category from `--category=id` (Addition if omitted).
 var start_level := 0
+var start_category: StringName = &"addition"
 
 func _ready() -> void:
 	_parse_cmdline()
 
-## `godot --path . -- --level=3` launches straight into Addition level 3 (playtesting).
+## `godot --path . -- --level=3` launches straight into Addition level 3;
+## add `--category=subtraction` for another category (playtesting).
 func _parse_cmdline() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--level="):
 			start_level = maxi(0, int(arg.get_slice("=", 1)))
+		elif arg.begins_with("--category="):
+			start_category = StringName(arg.get_slice("=", 1))
 
 ## Main calls this once at boot.
 func boot() -> void:
-	if start_level > 0:
-		start_round(&"addition", start_level)
+	if start_level > 0 and not Categories.category(start_category).is_empty():
+		start_round(start_category, start_level)
 	else:
 		to_menu()
 

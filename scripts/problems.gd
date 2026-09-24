@@ -2,19 +2,28 @@ class_name Problems
 extends RefCounted
 
 ## Pure problem generation — no nodes, so it runs headless in tests. A problem is a Dictionary
-## `{a, b, op, answer, key}`; `key` (e.g. "3+4") is how Stats files answers for that fact.
+## `{a, b, op, answer, key}`; `key` (e.g. "3+4", "7-2") is how Stats files answers for that fact.
+
+## How each operator is shown on a card (a true minus sign reads better than a hyphen).
+const SYMBOLS := {"+": "+", "-": "−"}
 
 static func answer(a: int, op: String, b: int) -> int:
 	match op:
 		"+":
 			return a + b
+		"-":
+			return a - b
 	push_error("Problems: unknown operator '%s'" % op)
 	return 0
 
 static func make(a: int, op: String, b: int) -> Dictionary:
 	return {"a": a, "b": b, "op": op, "answer": answer(a, op, b), "key": "%d%s%d" % [a, op, b]}
 
-## Every fact a level allows, in a stable order.
+## The problem as the student sees it, e.g. "7 − 2".
+static func text(p: Dictionary) -> String:
+	return "%d %s %d" % [p["a"], SYMBOLS.get(p["op"], p["op"]), p["b"]]
+
+## Every fact a level allows, in a stable order. Negative answers are never dealt.
 static func all_facts(level_cfg: Dictionary) -> Array:
 	var op: String = level_cfg["op"]
 	var ra: Array = level_cfg["a"]
@@ -23,17 +32,21 @@ static func all_facts(level_cfg: Dictionary) -> Array:
 	for a in range(ra[0], ra[1] + 1):
 		for b in range(rb[0], rb[1] + 1):
 			var p := make(a, op, b)
+			if p["answer"] < 0:
+				continue
 			if level_cfg.has("max_result") and p["answer"] > level_cfg["max_result"]:
 				continue
-			if level_cfg.get("no_regroup", false) and _regroups(a, b):
+			if level_cfg.get("no_regroup", false) and _regroups(a, op, b):
 				continue
 			facts.append(p)
 	return facts
 
-## True when adding column by column would carry.
-static func _regroups(a: int, b: int) -> bool:
+## True when working column by column would carry (addition) or borrow (subtraction).
+static func _regroups(a: int, op: String, b: int) -> bool:
 	while a > 0 or b > 0:
-		if a % 10 + b % 10 > 9:
+		if op == "+" and a % 10 + b % 10 > 9:
+			return true
+		if op == "-" and a % 10 < b % 10:
 			return true
 		a /= 10
 		b /= 10

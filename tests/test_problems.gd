@@ -36,6 +36,10 @@ func _test_answer() -> void:
 	_check(p["answer"] == 7, "3 + 4 = 7")
 	_check(p["key"] == "3+4", "fact key is compact and order-sensitive")
 	_check(Problems.make(4, "+", 3)["key"] != p["key"], "4+3 is filed separately from 3+4")
+	var q := Problems.make(7, "-", 2)
+	_check(q["answer"] == 5 and q["key"] == "7-2", "7 - 2 = 5, filed as 7-2")
+	_check(Problems.text(q) == "7 − 2", "a card shows a true minus sign")
+	_check(Problems.text(p) == "3 + 4", "a card shows the plus sign")
 
 func _test_level_lookup() -> void:
 	var cfg := Categories.level(&"addition", 2)
@@ -47,31 +51,41 @@ func _test_level_lookup() -> void:
 
 ## Every level's facts respect its ranges and limits, and every answer is right.
 func _test_level_facts() -> void:
-	for n in range(1, Categories.level_count(&"addition") + 1):
-		var cfg := Categories.level(&"addition", n)
-		var facts := Problems.all_facts(cfg)
-		_check(not facts.is_empty(), "level %d has facts" % n)
-		var ok := true
-		var keys := {}
-		for p in facts:
-			ok = ok and p["a"] >= cfg["a"][0] and p["a"] <= cfg["a"][1]
-			ok = ok and p["b"] >= cfg["b"][0] and p["b"] <= cfg["b"][1]
-			ok = ok and p["answer"] == p["a"] + p["b"]
-			if cfg.has("max_result"):
-				ok = ok and p["answer"] <= cfg["max_result"]
-			if cfg.get("no_regroup", false):
-				ok = ok and p["a"] % 10 + p["b"] <= 9
-			keys[p["key"]] = true
-		_check(ok, "level %d facts are in range with correct answers" % n)
-		_check(keys.size() == facts.size(), "level %d facts are all distinct" % n)
+	for cat in Categories.DATA:
+		for n in range(1, Categories.level_count(cat["id"]) + 1):
+			var cfg := Categories.level(cat["id"], n)
+			var name := "%s %d" % [cat["name"], n]
+			var facts := Problems.all_facts(cfg)
+			_check(facts.size() >= Config.DECK_SIZE, "%s has at least a deck's worth of facts" % name)
+			var ok := true
+			var keys := {}
+			for p in facts:
+				ok = ok and p["a"] >= cfg["a"][0] and p["a"] <= cfg["a"][1]
+				ok = ok and p["b"] >= cfg["b"][0] and p["b"] <= cfg["b"][1]
+				ok = ok and p["answer"] == Problems.answer(p["a"], cfg["op"], p["b"])
+				ok = ok and p["answer"] >= 0
+				if cfg.has("max_result"):
+					ok = ok and p["answer"] <= cfg["max_result"]
+				if cfg.get("no_regroup", false):
+					ok = ok and not Problems._regroups(p["a"], cfg["op"], p["b"])
+				keys[p["key"]] = true
+			_check(ok, "%s facts are in range with correct, non-negative answers" % name)
+			_check(keys.size() == facts.size(), "%s facts are all distinct" % name)
 	_check(Problems.all_facts(Categories.level(&"addition", 1)).size() == 21, "sums to 5 is 21 facts")
 	_check(Problems.all_facts(Categories.level(&"addition", 2)).size() == 66, "sums to 10 is 66 facts")
 	_check(Problems.all_facts(Categories.level(&"addition", 3)).size() == 121, "0..10 + 0..10 is 121 facts")
+	# subtraction mirrors addition: each addition fact has exactly one take-away partner
+	_check(Problems.all_facts(Categories.level(&"subtraction", 1)).size() == 21, "from 5 or less is 21 facts")
+	_check(Problems.all_facts(Categories.level(&"subtraction", 2)).size() == 66, "from 10 or less is 66 facts")
+	_check(Problems.all_facts(Categories.level(&"subtraction", 3)).size() == 121, "up to 20 − 10 is 121 facts")
 
 func _test_regrouping() -> void:
-	_check(not Problems._regroups(23, 4), "23 + 4 needs no carry")
-	_check(Problems._regroups(27, 4), "27 + 4 carries")
-	_check(not Problems._regroups(90, 9), "90 + 9 needs no carry")
+	_check(not Problems._regroups(23, "+", 4), "23 + 4 needs no carry")
+	_check(Problems._regroups(27, "+", 4), "27 + 4 carries")
+	_check(not Problems._regroups(90, "+", 9), "90 + 9 needs no carry")
+	_check(not Problems._regroups(47, "-", 3), "47 − 3 needs no borrow")
+	_check(Problems._regroups(43, "-", 7), "43 − 7 borrows")
+	_check(not Problems._regroups(40, "-", 0), "40 − 0 needs no borrow")
 
 func _test_deal() -> void:
 	var cfg := Categories.level(&"addition", 3)

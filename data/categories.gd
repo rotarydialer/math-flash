@@ -7,9 +7,10 @@ extends RefCounted
 ## Each level may set:
 ##   a, b          inclusive [lo, hi] range for each operand
 ##   max_result    drop facts whose answer is above this
-##   no_regroup    drop facts that need carrying (any column sums past 9)
+##   no_regroup    drop facts that need carrying or borrowing in any column
 ##   hint          short range description shown under the level name
-## Adding a category: a new entry here plus its operator in `Problems.answer`.
+## Facts with a negative answer are always dropped, so subtraction ranges can be written loosely.
+## Adding a category: a new entry here plus its operator in `Problems.answer` / `Problems.SYMBOLS`.
 
 static var DATA := [
 	{
@@ -21,6 +22,17 @@ static var DATA := [
 			{"hint": "Sums to 10", "a": [0, 10], "b": [0, 10], "max_result": 10},
 			{"hint": "Up to 10 + 10", "a": [0, 10], "b": [0, 10]},
 			{"hint": "Two digits + one", "a": [10, 99], "b": [1, 9], "no_regroup": true},
+		],
+	},
+	{
+		"id": &"subtraction",
+		"name": "Subtraction",
+		"op": "-",
+		"levels": [
+			{"hint": "From 5 or less", "a": [0, 5], "b": [0, 5]},
+			{"hint": "From 10 or less", "a": [0, 10], "b": [0, 10]},
+			{"hint": "Up to 20 − 10", "a": [0, 20], "b": [0, 10], "max_result": 10},
+			{"hint": "Two digits − one", "a": [10, 99], "b": [1, 9], "no_regroup": true},
 		],
 	},
 ]
