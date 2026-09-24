@@ -54,15 +54,15 @@ func _on_menu_opened() -> void:
 
 func show_categories() -> void:
 	category_id = &""
-	_title.text = "Math Flash"
+	_title.text = "Math Flash Cards"
 	_back.visible = false
 	_clear_list()
 	for cat in Categories.DATA:
 		var btn := Button.new()
-		btn.text = "%s\n%d levels" % [cat["name"], cat["levels"].size()]
+		btn.text = cat["name"]
 		btn.add_theme_font_size_override("font_size", Config.FONT_HEADER + 10)
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		btn.custom_minimum_size = Vector2(0, 180)
+		btn.custom_minimum_size = Vector2(0, 140)
 		btn.pressed.connect(show_levels.bind(cat["id"]))
 		_list.add_child(btn)
 
