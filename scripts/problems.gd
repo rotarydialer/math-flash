@@ -5,7 +5,7 @@ extends RefCounted
 ## `{a, b, op, answer, key}`; `key` (e.g. "3+4", "7-2") is how Stats files answers for that fact.
 
 ## How each operator is shown on a card (a true minus sign reads better than a hyphen).
-const SYMBOLS := {"+": "+", "-": "−"}
+const SYMBOLS := {"+": "+", "-": "−", "*": "×"}
 
 static func answer(a: int, op: String, b: int) -> int:
 	match op:
@@ -13,6 +13,8 @@ static func answer(a: int, op: String, b: int) -> int:
 			return a + b
 		"-":
 			return a - b
+		"*":
+			return a * b
 	push_error("Problems: unknown operator '%s'" % op)
 	return 0
 
@@ -23,22 +25,35 @@ static func make(a: int, op: String, b: int) -> Dictionary:
 static func text(p: Dictionary) -> String:
 	return "%d %s %d" % [p["a"], SYMBOLS.get(p["op"], p["op"]), p["b"]]
 
-## Every fact a level allows, in a stable order. Negative answers are never dealt.
+## Every fact a level allows, in a stable order. Negative answers are never dealt. With
+## `both_orders`, each fact also comes the other way round (7 × 2 as well as 2 × 7).
 static func all_facts(level_cfg: Dictionary) -> Array:
 	var op: String = level_cfg["op"]
 	var ra: Array = level_cfg["a"]
 	var rb: Array = level_cfg["b"]
-	var facts := []
+	var pairs: Array[Vector2i] = []
 	for a in range(ra[0], ra[1] + 1):
 		for b in range(rb[0], rb[1] + 1):
-			var p := make(a, op, b)
-			if p["answer"] < 0:
-				continue
-			if level_cfg.has("max_result") and p["answer"] > level_cfg["max_result"]:
-				continue
-			if level_cfg.get("no_regroup", false) and _regroups(a, op, b):
-				continue
-			facts.append(p)
+			pairs.append(Vector2i(a, b))
+	if level_cfg.get("both_orders", false):
+		for pair in pairs.duplicate():
+			pairs.append(Vector2i(pair.y, pair.x))
+	var facts := []
+	var seen := {}
+	for pair in pairs:
+		var a := pair.x
+		var b := pair.y
+		var p := make(a, op, b)
+		if seen.has(p["key"]):
+			continue
+		seen[p["key"]] = true
+		if p["answer"] < 0:
+			continue
+		if level_cfg.has("max_result") and p["answer"] > level_cfg["max_result"]:
+			continue
+		if level_cfg.get("no_regroup", false) and _regroups(a, op, b):
+			continue
+		facts.append(p)
 	return facts
 
 ## True when working column by column would carry (addition) or borrow (subtraction).

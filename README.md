@@ -19,11 +19,15 @@ later work out what needs more practice.
 | | 2 | From 10 or less |
 | | 3 | Up to 20 − 10, answers 0–10 (reverse of Addition 3) |
 | | 4 | Two digits − one digit, no borrowing (e.g. 47 − 3) |
+| Multiplication | 1 | Times 0, 1, 2 (both ways round: 7 × 2 and 2 × 7) |
+| | 2 | Times 3, 4, 5 (both ways round) |
+| | 3 | Times 6 to 9 (both ways round) |
+| | 4 | Everything up to 10 × 10 |
 
 Answers are never negative.
 
 Levels are defined in `data/categories.gd` by their operand ranges plus optional
-`max_result` / `no_regroup` filters. To add a new category (multiplication, …), add an entry
+`max_result` / `no_regroup` / `both_orders` options. To add a new category (division, …), add an entry
 there and its operator in `Problems.answer` / `Problems.SYMBOLS`. The menu picks it up
 automatically.
 

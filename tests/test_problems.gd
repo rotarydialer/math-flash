@@ -21,6 +21,7 @@ func _initialize() -> void:
 	_test_answer()
 	_test_level_lookup()
 	_test_level_facts()
+	_test_both_orders()
 	_test_regrouping()
 	_test_deal()
 	_test_deal_small_level()
@@ -40,6 +41,9 @@ func _test_answer() -> void:
 	_check(q["answer"] == 5 and q["key"] == "7-2", "7 - 2 = 5, filed as 7-2")
 	_check(Problems.text(q) == "7 − 2", "a card shows a true minus sign")
 	_check(Problems.text(p) == "3 + 4", "a card shows the plus sign")
+	var m := Problems.make(6, "*", 7)
+	_check(m["answer"] == 42 and m["key"] == "6*7", "6 × 7 = 42, filed as 6*7")
+	_check(Problems.text(m) == "6 × 7", "a card shows a times sign")
 
 func _test_level_lookup() -> void:
 	var cfg := Categories.level(&"addition", 2)
@@ -60,8 +64,9 @@ func _test_level_facts() -> void:
 			var ok := true
 			var keys := {}
 			for p in facts:
-				ok = ok and p["a"] >= cfg["a"][0] and p["a"] <= cfg["a"][1]
-				ok = ok and p["b"] >= cfg["b"][0] and p["b"] <= cfg["b"][1]
+				var in_order := _in(p["a"], cfg["a"]) and _in(p["b"], cfg["b"])
+				var swapped: bool = cfg.get("both_orders", false) and _in(p["b"], cfg["a"]) and _in(p["a"], cfg["b"])
+				ok = ok and (in_order or swapped)
 				ok = ok and p["answer"] == Problems.answer(p["a"], cfg["op"], p["b"])
 				ok = ok and p["answer"] >= 0
 				if cfg.has("max_result"):
@@ -78,6 +83,21 @@ func _test_level_facts() -> void:
 	_check(Problems.all_facts(Categories.level(&"subtraction", 1)).size() == 21, "from 5 or less is 21 facts")
 	_check(Problems.all_facts(Categories.level(&"subtraction", 2)).size() == 66, "from 10 or less is 66 facts")
 	_check(Problems.all_facts(Categories.level(&"subtraction", 3)).size() == 121, "up to 20 − 10 is 121 facts")
+	_check(Problems.all_facts(Categories.level(&"multiplication", 4)).size() == 121, "up to 10 × 10 is 121 facts")
+
+## A times-table level deals both orders once each, and nothing outside its tables.
+func _test_both_orders() -> void:
+	var keys := {}
+	for p in Problems.all_facts(Categories.level(&"multiplication", 1)):
+		keys[p["key"]] = true
+	_check(keys.has("7*2") and keys.has("2*7"), "the 2 times table comes both ways round")
+	_check(keys.has("0*0") and keys.has("1*2") and keys.has("2*1"), "small facts in both tables appear")
+	_check(not keys.has("7*3") and not keys.has("3*7"), "facts from other tables stay out")
+	# 0..10 × 0..2 is 33; flipping adds 3..10 × 0..2 the other way round, 24 more
+	_check(keys.size() == 57, "times 0, 1, 2 is 57 facts in both orders")
+
+static func _in(v: int, r: Array) -> bool:
+	return v >= r[0] and v <= r[1]
 
 func _test_regrouping() -> void:
 	_check(not Problems._regroups(23, "+", 4), "23 + 4 needs no carry")
