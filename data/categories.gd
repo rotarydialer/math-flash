@@ -10,6 +10,7 @@ extends RefCounted
 ##   no_regroup    drop facts that need carrying or borrowing in any column
 ##   regroup_only  keep only facts that need carrying or borrowing
 ##   both_orders   also deal each fact the other way round (b op a), for times tables
+##   skip_operands drop facts where either number is in this list (e.g. [1] for no × 1)
 ##   hint          short range description shown under the level name
 ## Facts with a negative answer are always dropped, so subtraction ranges can be written loosely.
 ## Adding a category: a new entry here plus its operator in `Problems.answer` / `Problems.SYMBOLS`.
@@ -47,7 +48,7 @@ static var DATA := [
 			{"hint": "Times 0, 1, 2", "a": [0, 10], "b": [0, 2], "both_orders": true},
 			{"hint": "Times 3, 4, 5", "a": [0, 10], "b": [3, 5], "both_orders": true},
 			{"hint": "Times 6 to 9", "a": [0, 10], "b": [6, 9], "both_orders": true},
-			{"hint": "Up to 10 × 10", "a": [0, 10], "b": [0, 10]},
+			{"hint": "Up to 12 × 12", "a": [0, 12], "b": [0, 12], "skip_operands": [1]},
 		],
 	},
 ]

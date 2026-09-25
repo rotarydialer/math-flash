@@ -24,12 +24,12 @@ later work out what needs more practice.
 | Multiplication | 1 | Times 0, 1, 2 (both ways round: 7 × 2 and 2 × 7) |
 | | 2 | Times 3, 4, 5 (both ways round) |
 | | 3 | Times 6 to 9 (both ways round) |
-| | 4 | Everything up to 10 × 10 |
+| | 4 | Everything up to 12 × 12, except × 1 |
 
 Answers are never negative.
 
 Levels are defined in `data/categories.gd` by their operand ranges plus optional
-`max_result` / `no_regroup` / `regroup_only` / `both_orders` options. To add a new category (division, …), add an entry
+`max_result` / `no_regroup` / `regroup_only` / `both_orders` / `skip_operands` options. To add a new category (division, …), add an entry
 there and its operator in `Problems.answer` / `Problems.SYMBOLS`. The menu picks it up
 automatically.
 

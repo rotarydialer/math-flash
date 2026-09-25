@@ -73,6 +73,8 @@ func _test_level_facts() -> void:
 					ok = ok and p["answer"] <= cfg["max_result"]
 				if cfg.get("no_regroup", false):
 					ok = ok and not Problems._regroups(p["a"], cfg["op"], p["b"])
+				for skip in cfg.get("skip_operands", []):
+					ok = ok and p["a"] != skip and p["b"] != skip
 				if cfg.get("regroup_only", false):
 					ok = ok and Problems._regroups(p["a"], cfg["op"], p["b"])
 				keys[p["key"]] = true
@@ -89,7 +91,8 @@ func _test_level_facts() -> void:
 	_check(Problems.all_facts(Categories.level(&"subtraction", 1)).size() == 21, "from 5 or less is 21 facts")
 	_check(Problems.all_facts(Categories.level(&"subtraction", 2)).size() == 66, "from 10 or less is 66 facts")
 	_check(Problems.all_facts(Categories.level(&"subtraction", 3)).size() == 121, "up to 20 − 10 is 121 facts")
-	_check(Problems.all_facts(Categories.level(&"multiplication", 4)).size() == 121, "up to 10 × 10 is 121 facts")
+	# 13 × 13 = 169, less the 25 facts with a 1 in them
+	_check(Problems.all_facts(Categories.level(&"multiplication", 4)).size() == 144, "up to 12 × 12 without × 1 is 144 facts")
 
 ## A times-table level deals both orders once each, and nothing outside its tables.
 func _test_both_orders() -> void:

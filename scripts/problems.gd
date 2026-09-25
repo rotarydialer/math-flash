@@ -49,6 +49,8 @@ static func all_facts(level_cfg: Dictionary) -> Array:
 		seen[p["key"]] = true
 		if p["answer"] < 0:
 			continue
+		if level_cfg.get("skip_operands", []).has(a) or level_cfg.get("skip_operands", []).has(b):
+			continue
 		if level_cfg.has("max_result") and p["answer"] > level_cfg["max_result"]:
 			continue
 		if level_cfg.get("no_regroup", false) and _regroups(a, op, b):
