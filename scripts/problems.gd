@@ -53,6 +53,8 @@ static func all_facts(level_cfg: Dictionary) -> Array:
 			continue
 		if level_cfg.get("no_regroup", false) and _regroups(a, op, b):
 			continue
+		if level_cfg.get("regroup_only", false) and not _regroups(a, op, b):
+			continue
 		facts.append(p)
 	return facts
 

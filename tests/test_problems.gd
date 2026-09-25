@@ -73,12 +73,18 @@ func _test_level_facts() -> void:
 					ok = ok and p["answer"] <= cfg["max_result"]
 				if cfg.get("no_regroup", false):
 					ok = ok and not Problems._regroups(p["a"], cfg["op"], p["b"])
+				if cfg.get("regroup_only", false):
+					ok = ok and Problems._regroups(p["a"], cfg["op"], p["b"])
 				keys[p["key"]] = true
 			_check(ok, "%s facts are in range with correct, non-negative answers" % name)
 			_check(keys.size() == facts.size(), "%s facts are all distinct" % name)
 	_check(Problems.all_facts(Categories.level(&"addition", 1)).size() == 21, "sums to 5 is 21 facts")
 	_check(Problems.all_facts(Categories.level(&"addition", 2)).size() == 66, "sums to 10 is 66 facts")
 	_check(Problems.all_facts(Categories.level(&"addition", 3)).size() == 121, "0..10 + 0..10 is 121 facts")
+	# levels 4 and 5 split two-digit + one-digit exactly into no-carry and carry
+	_check(Problems.all_facts(Categories.level(&"addition", 4)).size()
+		+ Problems.all_facts(Categories.level(&"addition", 5)).size() == 90 * 9,
+		"addition 4 and 5 together cover every two-digit + one-digit fact")
 	# subtraction mirrors addition: each addition fact has exactly one take-away partner
 	_check(Problems.all_facts(Categories.level(&"subtraction", 1)).size() == 21, "from 5 or less is 21 facts")
 	_check(Problems.all_facts(Categories.level(&"subtraction", 2)).size() == 66, "from 10 or less is 66 facts")

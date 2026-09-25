@@ -8,6 +8,7 @@ extends RefCounted
 ##   a, b          inclusive [lo, hi] range for each operand
 ##   max_result    drop facts whose answer is above this
 ##   no_regroup    drop facts that need carrying or borrowing in any column
+##   regroup_only  keep only facts that need carrying or borrowing
 ##   both_orders   also deal each fact the other way round (b op a), for times tables
 ##   hint          short range description shown under the level name
 ## Facts with a negative answer are always dropped, so subtraction ranges can be written loosely.
@@ -23,6 +24,8 @@ static var DATA := [
 			{"hint": "Sums to 10", "a": [0, 10], "b": [0, 10], "max_result": 10},
 			{"hint": "Up to 10 + 10", "a": [0, 10], "b": [0, 10]},
 			{"hint": "Two digits + one", "a": [10, 99], "b": [1, 9], "no_regroup": true},
+			{"hint": "Two digits + one, carry", "a": [10, 99], "b": [1, 9], "regroup_only": true},
+			{"hint": "Two digits + two", "a": [10, 99], "b": [10, 99], "no_regroup": true},
 		],
 	},
 	{

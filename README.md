@@ -15,6 +15,8 @@ later work out what needs more practice.
 | | 2 | Sums to 10 |
 | | 3 | Both numbers 0–10 (up to 10 + 10) |
 | | 4 | Two digits + one digit, no carrying (e.g. 23 + 4) |
+| | 5 | Two digits + one digit, with carrying (e.g. 27 + 5) |
+| | 6 | Two digits + two digits, no carrying (e.g. 23 + 45) |
 | Subtraction | 1 | From 5 or less (5 − 0 … 0 − 0) |
 | | 2 | From 10 or less |
 | | 3 | Up to 20 − 10, answers 0–10 (reverse of Addition 3) |
@@ -27,7 +29,7 @@ later work out what needs more practice.
 Answers are never negative.
 
 Levels are defined in `data/categories.gd` by their operand ranges plus optional
-`max_result` / `no_regroup` / `both_orders` options. To add a new category (division, …), add an entry
+`max_result` / `no_regroup` / `regroup_only` / `both_orders` options. To add a new category (division, …), add an entry
 there and its operator in `Problems.answer` / `Problems.SYMBOLS`. The menu picks it up
 automatically.
 
