@@ -4,12 +4,14 @@ extends Control
 ## Two-page picker. The top page has one big button per category; picking one opens its level
 ## list (with a Back button), one button per level with its range and how the student has done
 ## on it so far. Rebuilt on every change so the numbers stay current. Coming back from a round
-## lands on that round's category.
+## lands on that round's category. The top page's corner button shows who's playing and opens the
+## profile picker.
 
 const Config := preload("res://data/config.gd")
 
 var _title: Label
 var _back: Button
+var _profile: Button
 var _list: VBoxContainer
 ## The category whose levels are showing; empty on the top page.
 var category_id: StringName = &""
@@ -43,6 +45,14 @@ func _ready() -> void:
 	_back.position = Vector2(24, 36)
 	_back.pressed.connect(show_categories)
 	add_child(_back)
+	_profile = Button.new()
+	_profile.custom_minimum_size = Vector2(150, 84)
+	_profile.pressed.connect(GameState.to_profiles)
+	add_child(_profile)
+	# pinned to the top-right corner, growing leftwards to fit the name
+	_profile.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 24)
+	_profile.offset_top = 36
+	_profile.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	GameState.menu_opened.connect(_on_menu_opened)
 
 func _on_menu_opened() -> void:
@@ -56,6 +66,8 @@ func show_categories() -> void:
 	category_id = &""
 	_title.text = "Math Flash Cards"
 	_back.visible = false
+	_profile.text = Profiles.current_name()
+	_profile.visible = not _profile.text.is_empty()
 	_clear_list()
 	for cat in Categories.DATA:
 		var btn := Button.new()
@@ -70,6 +82,7 @@ func show_levels(id: StringName) -> void:
 	category_id = id
 	_title.text = Categories.category(id)["name"]
 	_back.visible = true
+	_profile.visible = false
 	_clear_list()
 	for n in range(1, Categories.level_count(id) + 1):
 		_list.add_child(_level_button(Categories.level(id, n)))

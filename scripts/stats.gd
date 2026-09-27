@@ -3,7 +3,7 @@ extends Node
 ## Autoload. Every answer, filed per fact per profile, so we can later work out what a student
 ## needs more practice on. Saved to user://stats_<profile>.cfg with one section per fact key
 ## ("3+4"): right, wrong, recent (the last RECENT_HISTORY answers, oldest first) and last_seen
-## (unix time). Only the "default" profile exists for now; a profile picker just sets profile_id.
+## (unix time). GameState keeps profile_id in step with the Profiles autoload.
 
 const Config := preload("res://data/config.gd")
 
@@ -17,8 +17,11 @@ var _cfg := ConfigFile.new()
 func _ready() -> void:
 	_load()
 
+static func path_for(id: String) -> String:
+	return "user://stats_%s.cfg" % id
+
 func save_path() -> String:
-	return "user://stats_%s.cfg" % profile_id
+	return path_for(profile_id)
 
 func record(problem: Dictionary, correct: bool) -> void:
 	var key: String = problem["key"]

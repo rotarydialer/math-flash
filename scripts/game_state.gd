@@ -1,14 +1,16 @@
 extends Node
 
 ## Autoload singleton. Owns which screen is up and the round in progress; broadcasts via signals
-## so the screens stay decoupled. Answers are handed to the Stats autoload as they come in.
+## so the screens stay decoupled. Answers are handed to the Stats autoload as they come in, filed
+## under whichever profile the Profiles autoload says is playing.
 
+signal profiles_opened()
 signal menu_opened()
 signal round_started(level_cfg: Dictionary, total: int)
 signal card_shown(problem: Dictionary, index: int, total: int)
 signal round_finished(score: int, total: int)
 
-enum State { MENU, PLAYING, SUMMARY }
+enum State { PROFILES, MENU, PLAYING, SUMMARY }
 
 const Config := preload("res://data/config.gd")
 
@@ -22,6 +24,9 @@ var start_category: StringName = &"addition"
 
 func _ready() -> void:
 	_parse_cmdline()
+	Profiles.selected.connect(_on_profile_selected)
+	if not Profiles.current_id.is_empty():
+		Stats.profile_id = Profiles.current_id
 
 ## `godot --path . -- --level=3` launches straight into Addition level 3;
 ## add `--category=subtraction` for another category (playtesting).
@@ -32,12 +37,27 @@ func _parse_cmdline() -> void:
 		elif arg.begins_with("--category="):
 			start_category = StringName(arg.get_slice("=", 1))
 
-## Main calls this once at boot.
+## Main calls this once at boot. Nobody's picked a profile yet → ask who's playing.
 func boot() -> void:
 	if start_level > 0 and not Categories.category(start_category).is_empty():
 		start_round(start_category, start_level)
+	elif Profiles.current_id.is_empty():
+		to_profiles()
 	else:
 		to_menu()
+
+func to_profiles() -> void:
+	state = State.PROFILES
+	profiles_opened.emit()
+
+## Switch who's playing and open the menu on its top page.
+func select_profile(id: String) -> void:
+	Profiles.select(id)
+	level_cfg = {}
+	to_menu()
+
+func _on_profile_selected(id: String) -> void:
+	Stats.profile_id = id
 
 func to_menu() -> void:
 	state = State.MENU

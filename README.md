@@ -39,10 +39,17 @@ automatically.
 
 ## Stats & profiles
 
-`scripts/stats.gd` saves each answer to `user://stats_<profile>.cfg`, with one section per fact
+Each student has a profile. The first launch asks "Who's playing?"; after that the app opens as
+whoever played last, and the name button in the menu's top corner switches players or adds a new one.
+
+`scripts/profiles.gd` keeps the list in `user://profiles.cfg`: each profile's `id` and `name`,
+plus which one is `current`. The id is fixed when the profile is made and names its stats file,
+so a name can be anything (up to 12 characters, no duplicates).
+
+`scripts/stats.gd` saves each answer to `user://stats_<id>.cfg`, with one section per fact
 key (`"3+4"`) holding `right`, `wrong`, `recent` (the last 10 answers) and `last_seen`. Each
-menu button shows that level's accuracy. For now everything goes to the `"default"` profile;
-supporting more students just needs a picker that sets `Stats.profile_id`.
+menu button shows that level's accuracy for whoever's playing. History saved before profiles
+existed (`stats_default.cfg`) goes to the first profile created.
 
 ## Project layout
 
@@ -52,8 +59,10 @@ supporting more students just needs a picker that sets `Stats.profile_id`.
 | `data/categories.gd` | Categories and their levels |
 | `scripts/problems.gd` | Pure problem generation: every fact in a level, plus the seeded deal. No nodes, so it can be tested headless |
 | `scripts/round.gd` | Pure model of one round: the deck, the current card, and the results |
-| `scripts/game_state.gd` | Autoload: which screen is up, the current round, and the signals |
+| `scripts/game_state.gd` | Autoload: which screen is up, the current round, switching profiles, and the signals |
+| `scripts/profiles.gd` | Autoload: the students' profiles and who's playing |
 | `scripts/stats.gd` | Autoload: per-profile, per-fact answer history |
+| `scripts/profile_screen.gd` | "Who's playing?": pick a player or add a new one |
 | `scripts/menu_screen.gd` | Two-page picker: categories, then that category's levels |
 | `scripts/play_screen.gd` | Card, ✗ / ✓ buttons, and the end-of-round summary |
 | `scripts/card.gd`, `scripts/answer_button.gd` | Placeholder art drawn in code |

@@ -1,11 +1,12 @@
 extends SceneTree
 
-## Headless tests for problem generation, rounds and stats. Run with:
+## Headless tests for problem generation, rounds, stats and profiles. Run with:
 ##   godot --headless --path . --script res://tests/test_problems.gd
 ## Exit code = number of failing checks (0 = all passed).
 
 const Config := preload("res://data/config.gd")
 const StatsScript := preload("res://scripts/stats.gd")
+const ProfilesScript := preload("res://scripts/profiles.gd")
 
 var _failures := 0
 var _checks := 0
@@ -27,6 +28,7 @@ func _initialize() -> void:
 	_test_deal_small_level()
 	_test_round()
 	_test_stats()
+	_test_profiles()
 	print("Checks: %d  Failures: %d" % [_checks, _failures])
 	if _failures == 0:
 		print("ALL TESTS PASSED")
@@ -187,3 +189,32 @@ func _test_stats() -> void:
 	stats.free()
 	reloaded.free()
 	other.free()
+
+func _test_profiles() -> void:
+	var path := "user://profiles_unit_test.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	var profiles := ProfilesScript.new()
+	profiles.legacy_id = ""
+	profiles.load_file(path)
+	_check(profiles.all().is_empty() and profiles.current_id.is_empty(), "no profiles to start with")
+	var ada: String = profiles.create("  Ada ")
+	var bo: String = profiles.create("Bo")
+	_check(not ada.is_empty() and not bo.is_empty() and ada != bo, "each profile gets its own id")
+	_check(profiles.find(ada)["name"] == "Ada", "names are trimmed")
+	_check(profiles.current_id.is_empty(), "creating a profile doesn't select it")
+	_check(profiles.create("ada").is_empty(), "names are unique, ignoring case")
+	_check(profiles.create("   ").is_empty(), "a blank name is refused")
+	_check(not profiles.name_problem("x".repeat(ProfilesScript.MAX_NAME_LENGTH + 1)).is_empty(), "a long name is refused")
+	var picked: Array[String] = []
+	profiles.selected.connect(func(id: String) -> void: picked.append(id))
+	profiles.select(bo)
+	profiles.select("nobody")
+	_check(profiles.current_id == bo and profiles.current_name() == "Bo", "select switches who's playing")
+	_check(picked == [bo], "select announces real profiles only")
+	var reloaded := ProfilesScript.new()
+	reloaded.load_file(path)
+	_check(reloaded.all().size() == 2 and reloaded.all()[0]["name"] == "Ada", "profiles survive a reload, in order")
+	_check(reloaded.current_id == bo, "who's playing survives a reload")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	profiles.free()
+	reloaded.free()
