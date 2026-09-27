@@ -25,11 +25,15 @@ later work out what needs more practice.
 | | 2 | Times 3, 4, 5 (both ways round) |
 | | 3 | Times 6 to 9 (both ways round) |
 | | 4 | Everything up to 12 × 12, except × 1 |
+| Division | 1 | Divide by 1 and 2 (answers 0–10) |
+| | 2 | Divide by 3, 4, 5 |
+| | 3 | Divide by 6 to 9 |
+| | 4 | Everything up to 144 ÷ 12, except ÷ 1 and answers of 1 |
 
-Answers are never negative.
+Answers are never negative, and division always comes out even (no remainders, never ÷ 0).
 
 Levels are defined in `data/categories.gd` by their operand ranges plus optional
-`max_result` / `no_regroup` / `regroup_only` / `both_orders` / `skip_operands` options. To add a new category (division, …), add an entry
+`max_result` / `no_regroup` / `regroup_only` / `both_orders` / `skip_numbers` options. To add a new category, add an entry
 there and its operator in `Problems.answer` / `Problems.SYMBOLS`. The menu picks it up
 automatically.
 

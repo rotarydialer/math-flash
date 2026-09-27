@@ -44,6 +44,9 @@ func _test_answer() -> void:
 	var m := Problems.make(6, "*", 7)
 	_check(m["answer"] == 42 and m["key"] == "6*7", "6 × 7 = 42, filed as 6*7")
 	_check(Problems.text(m) == "6 × 7", "a card shows a times sign")
+	var d := Problems.make(42, "/", 7)
+	_check(d["answer"] == 6 and d["key"] == "42/7", "42 ÷ 7 = 6, filed as 42/7")
+	_check(Problems.text(d) == "42 ÷ 7", "a card shows a division sign")
 
 func _test_level_lookup() -> void:
 	var cfg := Categories.level(&"addition", 2)
@@ -73,8 +76,10 @@ func _test_level_facts() -> void:
 					ok = ok and p["answer"] <= cfg["max_result"]
 				if cfg.get("no_regroup", false):
 					ok = ok and not Problems._regroups(p["a"], cfg["op"], p["b"])
-				for skip in cfg.get("skip_operands", []):
-					ok = ok and p["a"] != skip and p["b"] != skip
+				for skip in cfg.get("skip_numbers", []):
+					ok = ok and p["a"] != skip and p["b"] != skip and p["answer"] != skip
+				if cfg["op"] == "/":
+					ok = ok and p["b"] != 0 and p["answer"] * p["b"] == p["a"]
 				if cfg.get("regroup_only", false):
 					ok = ok and Problems._regroups(p["a"], cfg["op"], p["b"])
 				keys[p["key"]] = true
@@ -93,6 +98,12 @@ func _test_level_facts() -> void:
 	_check(Problems.all_facts(Categories.level(&"subtraction", 3)).size() == 121, "up to 20 − 10 is 121 facts")
 	# 13 × 13 = 169, less the 25 facts with a 1 in them
 	_check(Problems.all_facts(Categories.level(&"multiplication", 4)).size() == 144, "up to 12 × 12 without × 1 is 144 facts")
+	# division mirrors multiplication: one fact per divisor × quotient
+	_check(Problems.all_facts(Categories.level(&"division", 1)).size() == 22, "÷ 1, 2 is 22 facts")
+	_check(Problems.all_facts(Categories.level(&"division", 3)).size() == 44, "÷ 6 to 9 is 44 facts")
+	# divisors 2..12 × quotients 0 and 2..12
+	_check(Problems.all_facts(Categories.level(&"division", 4)).size() == 132, "up to 144 ÷ 12 without 1s is 132 facts")
+	_check(Problems.all_facts({"op": "/", "a": [0, 5], "b": [0, 0]}).is_empty(), "nothing is ever divided by zero")
 
 ## A times-table level deals both orders once each, and nothing outside its tables.
 func _test_both_orders() -> void:

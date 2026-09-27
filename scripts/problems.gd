@@ -5,7 +5,7 @@ extends RefCounted
 ## `{a, b, op, answer, key}`; `key` (e.g. "3+4", "7-2") is how Stats files answers for that fact.
 
 ## How each operator is shown on a card (a true minus sign reads better than a hyphen).
-const SYMBOLS := {"+": "+", "-": "−", "*": "×"}
+const SYMBOLS := {"+": "+", "-": "−", "*": "×", "/": "÷"}
 
 static func answer(a: int, op: String, b: int) -> int:
 	match op:
@@ -15,6 +15,8 @@ static func answer(a: int, op: String, b: int) -> int:
 			return a - b
 		"*":
 			return a * b
+		"/":
+			return a / b if b != 0 else 0
 	push_error("Problems: unknown operator '%s'" % op)
 	return 0
 
@@ -25,7 +27,8 @@ static func make(a: int, op: String, b: int) -> Dictionary:
 static func text(p: Dictionary) -> String:
 	return "%d %s %d" % [p["a"], SYMBOLS.get(p["op"], p["op"]), p["b"]]
 
-## Every fact a level allows, in a stable order. Negative answers are never dealt. With
+## Every fact a level allows, in a stable order. Negative answers, division by zero and
+## division with a remainder are never dealt. With
 ## `both_orders`, each fact also comes the other way round (7 × 2 as well as 2 × 7).
 static func all_facts(level_cfg: Dictionary) -> Array:
 	var op: String = level_cfg["op"]
@@ -43,13 +46,16 @@ static func all_facts(level_cfg: Dictionary) -> Array:
 	for pair in pairs:
 		var a := pair.x
 		var b := pair.y
+		if op == "/" and (b == 0 or a % b != 0):
+			continue
 		var p := make(a, op, b)
 		if seen.has(p["key"]):
 			continue
 		seen[p["key"]] = true
 		if p["answer"] < 0:
 			continue
-		if level_cfg.get("skip_operands", []).has(a) or level_cfg.get("skip_operands", []).has(b):
+		var skip: Array = level_cfg.get("skip_numbers", [])
+		if skip.has(a) or skip.has(b) or skip.has(p["answer"]):
 			continue
 		if level_cfg.has("max_result") and p["answer"] > level_cfg["max_result"]:
 			continue
