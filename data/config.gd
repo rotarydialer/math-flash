@@ -36,6 +36,8 @@ const CARD_EDGE := Color("c9b98f")
 const ANSWER_INK := Color("3a6fd8")
 const RIGHT := Color("3fae5a")
 const WRONG := Color("e0503a")
+const AVATAR_RIM := Color("9fb4d6")     # ring around a profile picture
+const AVATAR_BLANK := Color("fff2c4")   # the disc behind a player's initial when they have no picture
 
 # --- Feel / animation --------------------------------------------------------
 const FLIP_TIME := 0.28           # seconds for the whole flip (half to edge-on, half back)

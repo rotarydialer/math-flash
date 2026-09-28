@@ -2,7 +2,8 @@ extends Node2D
 
 ## Root scene wiring: builds the profile, menu and play screens in code and shows whichever one
 ## GameState says is up. Android's back gesture steps up a screen: round → levels →
-## categories → quit (from the profile picker it goes back to the menu, if someone's playing).
+## categories → quit. On the profile screen: picture grid → players → menu (or quit, if nobody's
+## picked yet).
 
 const Config := preload("res://data/config.gd")
 
@@ -34,10 +35,7 @@ func _notification(what: int) -> void:
 	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
 		return
 	if _profiles.visible:
-		if Profiles.current_id.is_empty():
-			get_tree().quit()
-		else:
-			GameState.to_menu()
+		_profiles.go_back()
 	elif _play.visible:
 		GameState.to_menu()
 	elif not _menu.category_id.is_empty():

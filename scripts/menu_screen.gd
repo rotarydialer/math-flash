@@ -4,14 +4,14 @@ extends Control
 ## Two-page picker. The top page has one big button per category; picking one opens its level
 ## list (with a Back button), one button per level with its range and how the student has done
 ## on it so far. Rebuilt on every change so the numbers stay current. Coming back from a round
-## lands on that round's category. The top page's corner button shows who's playing and opens the
-## profile picker.
+## lands on that round's category. The top page's corner button shows who's playing (picture and
+## name) and opens the profile picker.
 
 const Config := preload("res://data/config.gd")
 
 var _title: Label
 var _back: Button
-var _profile: Button
+var _profile: ProfileButton
 var _list: VBoxContainer
 ## The category whose levels are showing; empty on the top page.
 var category_id: StringName = &""
@@ -45,7 +45,7 @@ func _ready() -> void:
 	_back.position = Vector2(24, 36)
 	_back.pressed.connect(show_categories)
 	add_child(_back)
-	_profile = Button.new()
+	_profile = ProfileButton.new(60)
 	_profile.custom_minimum_size = Vector2(150, 84)
 	_profile.pressed.connect(GameState.to_profiles)
 	add_child(_profile)
@@ -66,7 +66,7 @@ func show_categories() -> void:
 	category_id = &""
 	_title.text = "Math Flash Cards"
 	_back.visible = false
-	_profile.text = Profiles.current_name()
+	_profile.show_player(Profiles.current_name(), Profiles.picture_of(Profiles.current_id))
 	_profile.visible = not _profile.text.is_empty()
 	_clear_list()
 	for cat in Categories.DATA:

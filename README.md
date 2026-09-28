@@ -41,15 +41,35 @@ automatically.
 
 Each student has a profile. The first launch asks "Who's playing?"; after that the app opens as
 whoever played last, and the name button in the menu's top corner switches players or adds a new one.
+A player can have a picture, chosen when they're added or later with their Picture button; without
+one they get their initial.
 
-`scripts/profiles.gd` keeps the list in `user://profiles.cfg`: each profile's `id` and `name`,
-plus which one is `current`. The id is fixed when the profile is made and names its stats file,
+`scripts/profiles.gd` keeps the list in `user://profiles.cfg`: each profile's `id`, `name` and
+`picture` (a file name in `profiles/images/`, or `""`), plus which one is `current`. The id is fixed when the profile is made and names its stats file,
 so a name can be anything (up to 12 characters, no duplicates).
 
 `scripts/stats.gd` saves each answer to `user://stats_<id>.cfg`, with one section per fact
 key (`"3+4"`) holding `right`, `wrong`, `recent` (the last 10 answers) and `last_seen`. Each
 menu button shows that level's accuracy for whoever's playing. History saved before profiles
 existed (`stats_default.cfg`) goes to the first profile created.
+
+### Profile pictures
+
+The pictures to choose from are whatever images (`.png`, `.jpg`, `.webp`, `.svg`) are in
+`profiles/images/`. That folder is gitignored, so the pictures stay private and each checkout
+brings its own. There's no extra build step: the export packs everything Godot has imported, so drop
+the files in and export as usual (below). They're shown cropped to a centred circle, so
+roughly square pictures with the subject in the middle work best.
+
+Textures import at most 512 px on a side (`[importer_defaults]` in `project.godot`) so photos
+don't bloat the APK. That default only applies to newly imported files; to re-import pictures
+that went in before it, delete their `.import` files and import again:
+
+```sh
+rm profiles/images/*.import && godot --headless --path . --import
+```
+
+A profile whose picture file has been removed just shows the initial again.
 
 ## Project layout
 
@@ -62,12 +82,14 @@ existed (`stats_default.cfg`) goes to the first profile created.
 | `scripts/game_state.gd` | Autoload: which screen is up, the current round, switching profiles, and the signals |
 | `scripts/profiles.gd` | Autoload: the students' profiles and who's playing |
 | `scripts/stats.gd` | Autoload: per-profile, per-fact answer history |
-| `scripts/profile_screen.gd` | "Who's playing?": pick a player or add a new one |
+| `scripts/profile_screen.gd` | "Who's playing?": pick a player, add one, or change a player's picture |
 | `scripts/menu_screen.gd` | Two-page picker: categories, then that category's levels |
 | `scripts/play_screen.gd` | Card, ✗ / ✓ buttons, and the end-of-round summary |
 | `scripts/card.gd`, `scripts/answer_button.gd` | Placeholder art drawn in code |
+| `scripts/avatar.gd`, `scripts/profile_button.gd` | A profile picture cropped to a circle (or the initial), and a button with one beside a name |
+| `profiles/images/` | Profile pictures to choose from (gitignored) |
 | `scripts/ui_theme.gd` | Shared button and label styling |
-| `tests/` | Headless logic tests and a bot playtest |
+| `tests/` | Headless logic tests and a bot playtest (`tests/fixtures/pictures/` stands in for `profiles/images/`) |
 
 ## Run
 

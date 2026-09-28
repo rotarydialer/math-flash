@@ -4,7 +4,7 @@ extends Node2D
 ## every level in every category through the actual tap flow — tap the card, wait for the flip, press
 ## ✓ or ✗ at random — checking the counter, button states, the summary score and that Stats
 ## recorded every answer. It also walks the two-page menu (categories → levels → round → back) and
-## the profile picker (first launch → add a player → switch players).
+## the profile picker (first launch → add a player → pick a picture → switch players).
 ## Uses throwaway profiles so real progress isn't touched. Run with:
 ##   godot --headless --path . res://tests/Playtest.tscn
 ## Prints PLAYTEST PASSED / FAILED; exit code = number of failing checks.
@@ -100,6 +100,7 @@ func _check_profiles() -> void:
 	var path := "user://profiles_playtest.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	Profiles.legacy_id = ""
+	Profiles.picture_dir = "res://tests/fixtures/pictures/"
 	Profiles.load_file(path)
 	GameState.boot()
 	_check(GameState.state == GameState.State.PROFILES, "first launch opens the profile picker")
@@ -109,32 +110,53 @@ func _check_profiles() -> void:
 	_check(Profiles.all().is_empty() and not _profiles._error.text.is_empty(), "a blank name is refused with a message")
 	_profiles._name_edit.text = "Ada"
 	_profiles._name_edit.text_submitted.emit("Ada")
+	_check(_profiles._picker.visible, "a new player picks a picture first")
+	_check(_profiles._grid.get_child_count() == 3, "the grid has every picture, plus none")
+	_check((_profiles._grid.get_child(0) as Button).button_pressed, "no picture is marked to start with")
+	(_profiles._grid.get_child(2) as Button).pressed.emit()
 	var ada := Profiles.current_id
 	_check(Profiles.current_name() == "Ada", "adding a name plays as them")
+	_check(Profiles.find(ada)["picture"] == "green.png", "the tapped picture is theirs")
 	_check(Stats.profile_id == ada, "Stats follows the new profile")
 	_check(GameState.state == GameState.State.MENU and _menu.category_id.is_empty(), "adding a player opens the menu")
 	_check(_menu._profile.visible and _menu._profile.text == "Ada", "the menu shows who's playing")
+	_check(_menu._profile.avatar.texture != null, "the menu shows their picture")
 	Stats.record(Problems.make(3, "+", 4), true)
 	_menu._profile.pressed.emit()
 	_check(GameState.state == GameState.State.PROFILES, "the name button opens the picker")
 	_check(_profiles._back.visible, "the picker has Back once someone's playing")
-	_check(_profiles._list.get_child_count() == 1, "one button per player")
+	_check(_profiles._list.get_child_count() == 1, "one row per player")
+	_check(_player_button(0).avatar.texture != null, "the player's row shows their picture")
+	_profiles._list.get_child(0).get_child(1).pressed.emit()
+	_check(_profiles._picker.visible and (_profiles._grid.get_child(2) as Button).button_pressed,
+		"Picture opens the grid on their current picture")
+	(_profiles._grid.get_child(0) as Button).pressed.emit()
+	_check(Profiles.find(ada)["picture"] == "" and not _profiles._picker.visible, "picking none clears it and closes the grid")
+	_check(GameState.state == GameState.State.PROFILES and Profiles.current_id == ada, "changing a picture stays on the picker")
+	_check(_player_button(0).avatar.texture == null, "the row goes back to the initial")
 	_profiles._name_edit.text = "ada"
 	_profiles._add.pressed.emit()
 	_check(Profiles.all().size() == 1 and not _profiles._error.text.is_empty(), "a duplicate name is refused with a message")
 	_profiles._name_edit.text = "Bo"
 	_profiles._add.pressed.emit()
+	_profiles.go_back()
+	_check(not _profiles._picker.visible and _profiles._list.get_child_count() == 2, "Back from a new player's grid lists them")
+	_check(Profiles.current_name() == "Ada", "...without switching to them yet")
+	_player_button(1).pressed.emit()
 	var bo := Profiles.current_id
 	_check(bo != ada and _menu._profile.text == "Bo", "a second player can be added")
 	_check(Stats.fact("3+4")["right"] == 0, "a new player starts with no history")
 	GameState.to_profiles()
-	_check((_profiles._list.get_child(1) as Button).button_pressed, "the picker marks who's playing")
-	(_profiles._list.get_child(0) as Button).pressed.emit()
+	_check(_player_button(1).button_pressed, "the picker marks who's playing")
+	_player_button(0).pressed.emit()
 	_check(Profiles.current_id == ada and Stats.fact("3+4")["right"] == 1, "switching back brings back that player's history")
 	for id in [ada, bo]:
 		Stats.profile_id = id
 		Stats.clear()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+func _player_button(i: int) -> ProfileButton:
+	return _profiles._list.get_child(i).get_child(0) as ProfileButton
 
 ## Wait for the flip to finish (bounded so a hang fails instead of freezing).
 func _settle() -> void:
