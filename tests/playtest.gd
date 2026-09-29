@@ -4,7 +4,8 @@ extends Node2D
 ## every level in every category through the actual tap flow — tap the card, wait for the flip, press
 ## ✓ or ✗ at random — checking the counter, button states, the summary score and that Stats
 ## recorded every answer. It also walks the two-page menu (categories → levels → round → back) and
-## the profile picker (first launch → add a player → pick a picture → switch players).
+## the profile picker (first launch → add a player → pick a picture → switch players → rename →
+## delete).
 ## Uses throwaway profiles so real progress isn't touched. Run with:
 ##   godot --headless --path . res://tests/Playtest.tscn
 ## Prints PLAYTEST PASSED / FAILED; exit code = number of failing checks.
@@ -127,12 +128,17 @@ func _check_profiles() -> void:
 	_check(_profiles._back.visible, "the picker has Back once someone's playing")
 	_check(_profiles._list.get_child_count() == 1, "one row per player")
 	_check(_player_button(0).avatar.texture != null, "the player's row shows their picture")
-	_profiles._list.get_child(0).get_child(1).pressed.emit()
+	_edit_button(0).pressed.emit()
+	_check(_profiles._editor.visible and _profiles._change_picture.visible, "Edit opens the editor, with Change Picture")
+	_profiles._change_picture.pressed.emit()
 	_check(_profiles._picker.visible and (_profiles._grid.get_child(2) as Button).button_pressed,
-		"Picture opens the grid on their current picture")
+		"Change Picture opens the grid on their current picture")
 	(_profiles._grid.get_child(0) as Button).pressed.emit()
 	_check(Profiles.find(ada)["picture"] == "" and not _profiles._picker.visible, "picking none clears it and closes the grid")
-	_check(GameState.state == GameState.State.PROFILES and Profiles.current_id == ada, "changing a picture stays on the picker")
+	_check(_profiles._editor.visible and _profiles._editor_avatar.texture == null, "...back to the editor, showing the initial")
+	_profiles.go_back()
+	_check(not _profiles._editor.visible, "Back closes the editor")
+	_check(GameState.state == GameState.State.PROFILES and Profiles.current_id == ada, "editing stays on the picker")
 	_check(_player_button(0).avatar.texture == null, "the row goes back to the initial")
 	_profiles._name_edit.text = "ada"
 	_profiles._add.pressed.emit()
@@ -150,10 +156,43 @@ func _check_profiles() -> void:
 	_check(_player_button(1).button_pressed, "the picker marks who's playing")
 	_player_button(0).pressed.emit()
 	_check(Profiles.current_id == ada and Stats.fact("3+4")["right"] == 1, "switching back brings back that player's history")
+	_check_rename_and_delete(ada)
 	for id in [ada, bo]:
 		Stats.profile_id = id
 		Stats.clear()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+## Ada (playing, with one answer on record) and Bo exist. Rename Ada, then delete her.
+func _check_rename_and_delete(ada: String) -> void:
+	GameState.to_profiles()
+	_edit_button(0).pressed.emit()
+	_check(_profiles._rename_edit.text == "Ada", "the editor starts with their name")
+	_profiles._rename_edit.text = "bo"
+	_profiles._rename_save.pressed.emit()
+	_check(Profiles.find(ada)["name"] == "Ada" and not _profiles._rename_error.text.is_empty(), "renaming to someone else's name is refused")
+	_profiles._rename_edit.text = "Ava"
+	_profiles._rename_edit.text_submitted.emit("Ava")
+	_check(Profiles.current_name() == "Ava" and not _profiles._editor.visible, "renaming saves and returns to the list")
+	_check(_player_button(0).text == "Ava", "the list shows the new name")
+	_check(Profiles.current_id == ada and Stats.fact("3+4")["right"] == 1, "renaming keeps their history")
+	_profiles._back.pressed.emit()
+	_check(_menu._profile.text == "Ava", "the menu shows the new name")
+	GameState.to_profiles()
+	_edit_button(0).pressed.emit()
+	_profiles._delete.pressed.emit()
+	_check(_profiles._confirm.visible and not _profiles._delete.visible, "Delete asks first")
+	_profiles.go_back()
+	_check(not _profiles._confirm.visible and _profiles._editor.visible and Profiles.all().size() == 2, "Back from the question keeps them")
+	_profiles._delete.pressed.emit()
+	_profiles._confirm_delete.pressed.emit()
+	_check(Profiles.all().size() == 1 and Profiles.find(ada).is_empty(), "confirming deletes them")
+	_check(not FileAccess.file_exists(Stats.path_for(ada)), "their stats file is gone")
+	_check(GameState.state == GameState.State.PROFILES and not _profiles._editor.visible, "deleting lands on the list")
+	_check(Profiles.current_id.is_empty() and not _profiles._back.visible, "deleting who's playing means someone has to pick")
+	_check(Stats.fact("3+4")["right"] == 0, "their history isn't left loaded")
+
+func _edit_button(i: int) -> Button:
+	return _profiles._list.get_child(i).get_child(1) as Button
 
 func _player_button(i: int) -> ProfileButton:
 	return _profiles._list.get_child(i).get_child(0) as ProfileButton

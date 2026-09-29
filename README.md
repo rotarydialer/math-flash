@@ -41,8 +41,9 @@ automatically.
 
 Each student has a profile. The first launch asks "Who's playing?"; after that the app opens as
 whoever played last, and the name button in the menu's top corner switches players or adds a new one.
-A player can have a picture, chosen when they're added or later with their Picture button; without
-one they get their initial.
+A player can have a picture, chosen when they're added; without one they get their initial. Each
+player's Edit button renames them, changes their picture, or deletes them. Deleting asks first, and
+takes their stats with them; renaming keeps them, since the stats file is named by id.
 
 `scripts/profiles.gd` keeps the list in `user://profiles.cfg`: each profile's `id`, `name` and
 `picture` (a file name in `profiles/images/`, or `""`), plus which one is `current`. The id is fixed when the profile is made and names its stats file,
@@ -82,7 +83,7 @@ A profile whose picture file has been removed just shows the initial again.
 | `scripts/game_state.gd` | Autoload: which screen is up, the current round, switching profiles, and the signals |
 | `scripts/profiles.gd` | Autoload: the students' profiles and who's playing |
 | `scripts/stats.gd` | Autoload: per-profile, per-fact answer history |
-| `scripts/profile_screen.gd` | "Who's playing?": pick a player, add one, or change a player's picture |
+| `scripts/profile_screen.gd` | "Who's playing?": pick a player, add one, or edit one (rename, picture, delete) |
 | `scripts/menu_screen.gd` | Two-page picker: categories, then that category's levels |
 | `scripts/play_screen.gd` | Card, ✗ / ✓ buttons, and the end-of-round summary |
 | `scripts/card.gd`, `scripts/answer_button.gd` | Placeholder art drawn in code |

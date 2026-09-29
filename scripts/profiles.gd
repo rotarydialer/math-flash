@@ -53,15 +53,16 @@ func find(id: String) -> Dictionary:
 func current_name() -> String:
 	return find(current_id).get("name", "")
 
-## Why this name can't be used for a new profile, or "" if it can.
-func name_problem(player_name: String) -> String:
+## Why this name can't be used, or "" if it can. Renaming passes the profile's own id, so it
+## can keep its name or just change its capitals.
+func name_problem(player_name: String, own_id := "") -> String:
 	var n := player_name.strip_edges()
 	if n.is_empty():
 		return "Type a name first"
 	if n.length() > MAX_NAME_LENGTH:
 		return "That name is too long"
 	for p in _list:
-		if str(p["name"]).to_lower() == n.to_lower():
+		if p["id"] != own_id and str(p["name"]).to_lower() == n.to_lower():
 			return "%s is already here" % p["name"]
 	return ""
 
@@ -75,6 +76,26 @@ func create(player_name: String) -> String:
 	_list.append({"id": id, "name": player_name.strip_edges(), "picture": ""})
 	_save()
 	return id
+
+## Renames a profile; false (and nothing changes) if the name can't be used.
+func rename(id: String, player_name: String) -> bool:
+	var p := find(id)
+	if p.is_empty() or not name_problem(player_name, id).is_empty():
+		return false
+	p["name"] = player_name.strip_edges()
+	_save()
+	return true
+
+## Removes a profile and its stats file for good. If it was playing, nobody is now.
+func delete(id: String) -> void:
+	var p := find(id)
+	if p.is_empty():
+		return
+	_list.erase(p)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(StatsScript.path_for(id)))
+	if current_id == id:
+		current_id = ""
+	_save()
 
 func select(id: String) -> void:
 	if find(id).is_empty():

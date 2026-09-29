@@ -56,6 +56,13 @@ func select_profile(id: String) -> void:
 	level_cfg = {}
 	to_menu()
 
+## Delete a player and their history, then ask who's playing.
+func delete_profile(id: String) -> void:
+	Profiles.delete(id)
+	if Stats.profile_id == id:
+		Stats.clear()
+	to_profiles()
+
 func _on_profile_selected(id: String) -> void:
 	Stats.profile_id = id
 

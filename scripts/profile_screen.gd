@@ -3,12 +3,13 @@ extends Control
 
 ## Who's playing: a box to type a new player's name (up top, clear of the phone's keyboard), then
 ## one row per profile: a big button with their picture and name (the current one shows pressed
-## in), and a Picture button to change it. Picking a name switches to that profile and opens the
-## menu. A new player picks their picture straight away, then goes to the menu. Back only shows once
-## someone has picked, and returns to the menu unchanged.
+## in), and an Edit button. Picking a name switches to that profile and opens the menu. A new player
+## picks their picture straight away, then goes to the menu. Back only shows once someone has
+## picked, and returns to the menu unchanged.
 ##
-## Choosing a picture is an overlay: a grid of every picture, plus the plain initial for none.
-## The Picture buttons and the overlay only appear if there are pictures to choose from.
+## Two overlays sit on top. Edit: rename the player, change their picture, or delete them (after
+## a confirm, since their progress goes too). The picture grid: every picture, plus the plain
+## initial for none; it and the Change Picture button only appear if there are pictures.
 
 const Config := preload("res://data/config.gd")
 
@@ -28,23 +29,32 @@ var _grid: GridContainer
 ## The profile choosing a picture, and whether it was just made (then it plays once it's chosen).
 var _picking_id := ""
 var _picking_new := false
+var _editor: Control
+var _editor_title: Label
+var _editor_avatar: Avatar
+var _rename_edit: LineEdit
+var _rename_save: Button
+var _rename_error: Label
+var _change_picture: Button
+var _delete: Button
+var _confirm: VBoxContainer
+var _confirm_label: Label
+var _confirm_delete: Button
+var _editing_id := ""
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UiTheme.build()
 	var box := _page_box(self)
 	_title_label(box).text = "Who's playing?"
-	box.add_child(_build_add_row())
-	_error = Label.new()
-	_error.add_theme_font_size_override("font_size", 28)
-	_error.add_theme_color_override("font_color", Config.WRONG)
-	_error.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(_error)
+	_build_add_row(box)
+	_error = _error_label(box)
 	_list = VBoxContainer.new()
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_theme_constant_override("separation", 22)
 	_scroll(box).add_child(_list)
 	_back = _back_button(self, GameState.to_menu)
+	_build_editor()
 	_build_picker()
 	GameState.profiles_opened.connect(refresh)
 
@@ -74,6 +84,58 @@ func _scroll(box: Container) -> ScrollContainer:
 	box.add_child(scroll)
 	return scroll
 
+func _error_label(box: Container) -> Label:
+	var label := Label.new()
+	label.add_theme_font_size_override("font_size", 28)
+	label.add_theme_color_override("font_color", Config.WRONG)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(label)
+	return label
+
+## A name box and its button, side by side.
+func _name_row(box: Container, placeholder: String, button_text: String, action: Callable) -> LineEdit:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	box.add_child(row)
+	var edit := LineEdit.new()
+	edit.placeholder_text = placeholder
+	edit.max_length = Profiles.MAX_NAME_LENGTH
+	edit.custom_minimum_size = Vector2(0, 100)
+	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	edit.text_submitted.connect(func(_text: String) -> void: action.call())
+	row.add_child(edit)
+	var btn := Button.new()
+	btn.text = button_text
+	btn.custom_minimum_size = Vector2(150, 100)
+	btn.pressed.connect(action)
+	row.add_child(btn)
+	return edit
+
+## A page that covers the list.
+func _overlay() -> Control:
+	var overlay := Control.new()
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.visible = false
+	add_child(overlay)
+	var bg := ColorRect.new()
+	bg.color = Config.BACKGROUND
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(bg)
+	return overlay
+
+func _centered_button(box: Container, label: String, action: Callable) -> Button:
+	var btn := Button.new()
+	btn.text = label
+	btn.custom_minimum_size = Vector2(360, 100)
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.pressed.connect(action)
+	box.add_child(btn)
+	return btn
+
+func _warning_ink(btn: Button) -> void:
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+		btn.add_theme_color_override(state, Config.WRONG)
+
 func _back_button(parent: Control, action: Callable) -> Button:
 	var back := Button.new()
 	back.text = "Back"
@@ -83,33 +145,53 @@ func _back_button(parent: Control, action: Callable) -> Button:
 	parent.add_child(back)
 	return back
 
-func _build_add_row() -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
-	_name_edit = LineEdit.new()
-	_name_edit.placeholder_text = "New player's name"
-	_name_edit.max_length = Profiles.MAX_NAME_LENGTH
-	_name_edit.custom_minimum_size = Vector2(0, 100)
-	_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_name_edit.text_submitted.connect(func(_text: String) -> void: add_player())
+func _build_add_row(box: Container) -> void:
+	_name_edit = _name_row(box, "New player's name", "Add", add_player)
 	_name_edit.text_changed.connect(func(_text: String) -> void: _error.text = "")
-	row.add_child(_name_edit)
-	_add = Button.new()
-	_add.text = "Add"
-	_add.custom_minimum_size = Vector2(150, 100)
-	_add.pressed.connect(add_player)
-	row.add_child(_add)
-	return row
+	_add = _name_edit.get_parent().get_child(1) as Button
+
+func _build_editor() -> void:
+	_editor = _overlay()
+	var box := _page_box(_editor)
+	_editor_title = _title_label(box)
+	_editor_avatar = Avatar.new()
+	_editor_avatar.custom_minimum_size = Vector2(0, 180)
+	box.add_child(_editor_avatar)
+	_rename_edit = _name_row(box, "Name", "Save", save_rename)
+	_rename_edit.text_changed.connect(func(_text: String) -> void: _rename_error.text = "")
+	_rename_save = _rename_edit.get_parent().get_child(1) as Button
+	_rename_error = _error_label(box)
+	_change_picture = _centered_button(box, "Change Picture", func() -> void: open_picker(_editing_id, false))
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(spacer)
+	_delete = _centered_button(box, "Delete", _ask_delete)
+	_warning_ink(_delete)
+	_confirm = VBoxContainer.new()
+	_confirm.add_theme_constant_override("separation", 24)
+	_confirm.visible = false
+	box.add_child(_confirm)
+	_confirm_label = Label.new()
+	_confirm_label.add_theme_font_size_override("font_size", 30)
+	_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_confirm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_confirm.add_child(_confirm_label)
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 24)
+	_confirm.add_child(buttons)
+	for spec in [["Keep", _cancel_delete], ["Delete", func() -> void: GameState.delete_profile(_editing_id)]]:
+		var btn := Button.new()
+		btn.text = spec[0]
+		btn.custom_minimum_size = Vector2(240, 100)
+		btn.pressed.connect(spec[1])
+		buttons.add_child(btn)
+	_confirm_delete = buttons.get_child(1) as Button
+	_warning_ink(_confirm_delete)
+	_back_button(_editor, refresh)
 
 func _build_picker() -> void:
-	_picker = Control.new()
-	_picker.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_picker.visible = false
-	add_child(_picker)
-	var bg := ColorRect.new()
-	bg.color = Config.BACKGROUND
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_picker.add_child(bg)
+	_picker = _overlay()
 	var box := _page_box(_picker)
 	_picker_title = _title_label(box)
 	_picker_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -119,15 +201,15 @@ func _build_picker() -> void:
 	_grid.add_theme_constant_override("h_separation", 22)
 	_grid.add_theme_constant_override("v_separation", 22)
 	_scroll(box).add_child(_grid)
-	_back_button(_picker, refresh)
+	_back_button(_picker, _close_picker)
 
 func refresh() -> void:
 	_picker.visible = false
+	_editor.visible = false
 	_back.visible = not Profiles.current_id.is_empty()
 	_name_edit.clear()
 	_error.text = ""
 	_clear(_list)
-	var have_pictures := not Profiles.pictures().is_empty()
 	for p in Profiles.all():
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 16)
@@ -141,13 +223,11 @@ func refresh() -> void:
 		btn.button_pressed = p["id"] == Profiles.current_id
 		btn.pressed.connect(GameState.select_profile.bind(p["id"]))
 		row.add_child(btn)
-		var pic := Button.new()
-		pic.text = "Picture"
-		pic.add_theme_font_size_override("font_size", 28)
-		pic.custom_minimum_size = Vector2(0, ROW_HEIGHT)
-		pic.visible = have_pictures
-		pic.pressed.connect(open_picker.bind(p["id"], false))
-		row.add_child(pic)
+		var edit := Button.new()
+		edit.text = "Edit"
+		edit.custom_minimum_size = Vector2(0, ROW_HEIGHT)
+		edit.pressed.connect(open_editor.bind(p["id"]))
+		row.add_child(edit)
 
 ## Makes a profile from the typed name. It picks a picture first if there are any, then plays.
 func add_player() -> void:
@@ -160,6 +240,37 @@ func add_player() -> void:
 		GameState.select_profile(id)
 	else:
 		open_picker(id, true)
+
+func open_editor(id: String) -> void:
+	_editing_id = id
+	var p := Profiles.find(id)
+	_editor_title.text = "Edit %s" % p["name"]
+	_editor_avatar.initial = str(p["name"]).left(1)
+	_editor_avatar.texture = Profiles.picture_of(id)
+	_rename_edit.text = p["name"]
+	_rename_error.text = ""
+	_change_picture.visible = not Profiles.pictures().is_empty()
+	_delete.text = "Delete %s" % p["name"]
+	_cancel_delete()
+	_picker.visible = false
+	_editor.visible = true
+
+func save_rename() -> void:
+	var problem := Profiles.name_problem(_rename_edit.text, _editing_id)
+	if not problem.is_empty():
+		_rename_error.text = problem
+		return
+	Profiles.rename(_editing_id, _rename_edit.text)
+	refresh()
+
+func _ask_delete() -> void:
+	_confirm_label.text = "Delete %s and all their progress? This can't be undone." % Profiles.find(_editing_id)["name"]
+	_delete.visible = false
+	_confirm.visible = true
+
+func _cancel_delete() -> void:
+	_confirm.visible = false
+	_delete.visible = true
 
 func open_picker(id: String, is_new: bool) -> void:
 	_picking_id = id
@@ -195,11 +306,23 @@ func _choose(file: String) -> void:
 	if _picking_new:
 		GameState.select_profile(_picking_id)
 	else:
-		refresh()
+		open_editor(_picking_id)
 
-## Android's back gesture: close the picture grid, else back to the menu, else quit.
+## Back from the grid: a new player lands in the list; otherwise back to editing them.
+func _close_picker() -> void:
+	if _picking_new:
+		refresh()
+	else:
+		open_editor(_picking_id)
+
+## Android's back gesture steps back one page: delete confirm → editor → list → menu (or quit, if
+## nobody's picked yet).
 func go_back() -> void:
 	if _picker.visible:
+		_close_picker()
+	elif _editor.visible and _confirm.visible:
+		_cancel_delete()
+	elif _editor.visible:
 		refresh()
 	elif not Profiles.current_id.is_empty():
 		GameState.to_menu()
