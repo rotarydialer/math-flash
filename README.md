@@ -50,8 +50,10 @@ takes their stats with them; renaming keeps them, since the stats file is named 
 so a name can be anything (up to 12 characters, no duplicates).
 
 `scripts/stats.gd` saves each answer to `user://stats_<id>.cfg`, with one section per fact
-key (`"3+4"`) holding `right`, `wrong`, `recent` (the last 10 answers) and `last_seen`. Each
-menu button shows that level's accuracy for whoever's playing. History saved before profiles
+key (`"3+4"`) holding `right`, `wrong`, `recent` (the last 10 answers) and `last_seen`.
+Levels share facts (every Addition 1 fact is also in Addition 2 and 3), so each level also keeps
+its own `right`, `wrong` and `seen` (fact keys) in a `level:<category>:<n>` section. Each menu
+button shows only the answers given in that level, and says "New!" until the student plays it. History saved before profiles
 existed (`stats_default.cfg`) goes to the first profile created.
 
 ### Profile pictures

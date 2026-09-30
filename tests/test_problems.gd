@@ -167,9 +167,10 @@ func _test_stats() -> void:
 	stats.profile_id = "unit_test"
 	stats.clear()
 	var p := Problems.make(3, "+", 4)
-	stats.record(p, true)
-	stats.record(p, false)
-	stats.record(p, true)
+	var add2 := Categories.level(&"addition", 2)
+	stats.record(p, true, add2)
+	stats.record(p, false, add2)
+	stats.record(p, true, add2)
 	var reloaded := StatsScript.new()
 	reloaded.profile_id = "unit_test"
 	var f: Dictionary = reloaded.fact("3+4")
@@ -178,10 +179,21 @@ func _test_stats() -> void:
 	_check(f["last_seen"] > 0, "last_seen is stamped")
 	_check(reloaded.fact("5+5")["right"] == 0, "an unseen fact reads as zeroes")
 	for i in Config.RECENT_HISTORY + 5:
-		stats.record(p, false)
+		stats.record(p, false, add2)
 	_check(stats.fact("3+4")["recent"].size() == Config.RECENT_HISTORY, "recent history is capped")
-	var summary: Dictionary = stats.level_summary(Categories.level(&"addition", 2))
-	_check(summary["seen"] == 1 and summary["right"] == 2, "level summary totals the facts in the level")
+	var summary: Dictionary = stats.level_summary(add2)
+	_check(summary["seen"] == 1 and summary["right"] == 2 and summary["wrong"] == Config.RECENT_HISTORY + 6,
+		"level summary totals the answers given in the level")
+	_check(reloaded.level_summary(add2)["right"] == 2 and reloaded.level_summary(add2)["seen"] == 1,
+		"level tallies survive a reload")
+	# 2+3 is in Addition 1, 2 and 3; answering it in level 1 must only count for level 1
+	stats.record(Problems.make(2, "+", 3), true, Categories.level(&"addition", 1))
+	var add1: Dictionary = stats.level_summary(Categories.level(&"addition", 1))
+	_check(add1["right"] == 1 and add1["seen"] == 1, "an answer counts for the level it was given in")
+	_check(stats.level_summary(add2)["right"] == 2 and stats.level_summary(add2)["seen"] == 1,
+		"...and not for another level that shares the fact")
+	_check(stats.level_summary(Categories.level(&"addition", 3))["right"] == 0, "...nor a level never played")
+	_check(stats.fact("2+3")["right"] == 1, "the fact's own history still has the answer")
 	var other := StatsScript.new()
 	other.profile_id = "unit_test_other"
 	_check(other.fact("3+4")["right"] == 0, "profiles keep separate histories")
@@ -233,7 +245,7 @@ func _test_profiles() -> void:
 	_check(reloaded.find(ada)["name"] == "Ava", "a rename survives a reload")
 	var ada_stats := StatsScript.new()
 	ada_stats.profile_id = ada
-	ada_stats.record(Problems.make(1, "+", 1), true)
+	ada_stats.record(Problems.make(1, "+", 1), true, Categories.level(&"addition", 1))
 	profiles.delete(bo)
 	_check(profiles.find(bo).is_empty() and profiles.current_id.is_empty(), "deleting who's playing leaves nobody playing")
 	profiles.delete(ada)

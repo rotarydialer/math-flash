@@ -84,7 +84,7 @@ func play_again() -> void:
 func answer(correct: bool) -> void:
 	if state != State.PLAYING:
 		return
-	Stats.record(current_round.current(), correct)
+	Stats.record(current_round.current(), correct, level_cfg)
 	current_round.record(correct)
 	if current_round.is_done():
 		state = State.SUMMARY

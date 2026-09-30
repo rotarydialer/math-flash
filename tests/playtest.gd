@@ -122,7 +122,7 @@ func _check_profiles() -> void:
 	_check(GameState.state == GameState.State.MENU and _menu.category_id.is_empty(), "adding a player opens the menu")
 	_check(_menu._profile.visible and _menu._profile.text == "Ada", "the menu shows who's playing")
 	_check(_menu._profile.avatar.texture != null, "the menu shows their picture")
-	Stats.record(Problems.make(3, "+", 4), true)
+	Stats.record(Problems.make(3, "+", 4), true, Categories.level(&"addition", 2))
 	_menu._profile.pressed.emit()
 	_check(GameState.state == GameState.State.PROFILES, "the name button opens the picker")
 	_check(_profiles._back.visible, "the picker has Back once someone's playing")
