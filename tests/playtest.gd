@@ -78,6 +78,14 @@ func _play_level(category_id: StringName, n: int) -> void:
 	print("%s level %d: %d / %d" % [category_id, n, expected_score, total])
 	GameState.to_menu()
 	_check(_menu.category_id == category_id, "L%d: leaving a round lands on its category's levels" % n)
+	var played := _menu._list.get_child(n - 1) as ProgressButton
+	var answered: int = after["right"] + after["wrong"]
+	var tried: float = float(after["seen"]) / after["facts"]
+	_check(is_equal_approx(played.right + played.wrong, tried), "L%d: its bar is as long as the share of facts tried" % n)
+	_check(is_equal_approx(played.right, tried * after["right"] / answered), "L%d: ...green for the share right" % n)
+	if n < Categories.level_count(category_id):
+		var next := _menu._list.get_child(n) as ProgressButton
+		_check(next.right == 0.0 and next.wrong == 0.0, "L%d: the next level, not played yet, has no bar" % n)
 
 ## The top page lists categories; a category button opens its levels; Back returns.
 func _check_menu() -> void:

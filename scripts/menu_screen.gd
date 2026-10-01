@@ -3,7 +3,8 @@ extends Control
 
 ## Two-page picker. The top page has one big button per category; picking one opens its level
 ## list (with a Back button), one button per level with its range and how the student has done
-## on it so far. Rebuilt on every change so the numbers stay current. Coming back from a round
+## on it so far. The button fills like a bar: as far across as the share of facts tried, green for
+## the % right and red for the % wrong. Rebuilt on every change so the numbers stay current. Coming back from a round
 ## lands on that round's category. The top page's corner button shows who's playing (picture and
 ## name) and opens the profile picker.
 
@@ -92,16 +93,21 @@ func _clear_list() -> void:
 		_list.remove_child(child)
 		child.queue_free()
 
-func _level_button(cfg: Dictionary) -> Button:
-	var btn := Button.new()
-	btn.text = "Level %d  ·  %s\n%s" % [cfg["number"], cfg["hint"], _progress_text(cfg)]
+func _level_button(cfg: Dictionary) -> ProgressButton:
+	var s := Stats.level_summary(cfg)
+	var answered: int = s["right"] + s["wrong"]
+	var btn := ProgressButton.new()
+	btn.text = "Level %d  ·  %s\n%s" % [cfg["number"], cfg["hint"], _progress_text(s)]
+	if answered > 0:
+		var tried: float = float(s["seen"]) / s["facts"]
+		btn.right = tried * s["right"] / answered
+		btn.wrong = tried - btn.right
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.custom_minimum_size = Vector2(0, 130)
 	btn.pressed.connect(GameState.start_round.bind(cfg["category"], cfg["number"]))
 	return btn
 
-func _progress_text(cfg: Dictionary) -> String:
-	var s := Stats.level_summary(cfg)
+func _progress_text(s: Dictionary) -> String:
 	var answered: int = s["right"] + s["wrong"]
 	if answered == 0:
 		return "New!"

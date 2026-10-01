@@ -57,7 +57,10 @@ so a name can be anything (up to 12 characters, no duplicates).
 key (`"3+4"`) holding `right`, `wrong`, `recent` (the last 10 answers) and `last_seen`.
 Levels share facts (every Addition 1 fact is also in Addition 2 and 3), so each level also keeps
 its own `right`, `wrong` and `seen` (fact keys) in a `level:<category>:<n>` section. Each menu
-button shows only the answers given in that level, and says "New!" until the student plays it. History saved before profiles
+button shows only the answers given in that level, and says "New!" until the student plays it.
+The button fills like a bar: as far across as the share of the level's facts tried, split into
+green (`PROGRESS_RIGHT`) and red (`PROGRESS_WRONG`) by how those answers went; both colours are in
+`data/config.gd`. History saved before profiles
 existed (`stats_default.cfg`) goes to the first profile created.
 
 ### Profile pictures
@@ -93,6 +96,7 @@ A profile whose picture file has been removed just shows the initial again.
 | `scripts/menu_screen.gd` | Two-page picker: categories, then that category's levels |
 | `scripts/play_screen.gd` | Card, ✗ / ✓ buttons, and the end-of-round summary |
 | `scripts/card.gd`, `scripts/answer_button.gd` | Placeholder art drawn in code |
+| `scripts/progress_button.gd` | A button with a right/wrong bar behind its text (the level list's progress) |
 | `scripts/avatar.gd`, `scripts/profile_button.gd` | A profile picture cropped to a circle (or the initial), and a button with one beside a name |
 | `profiles/images/` | Profile pictures to choose from (gitignored) |
 | `scripts/ui_theme.gd` | Shared button and label styling |
