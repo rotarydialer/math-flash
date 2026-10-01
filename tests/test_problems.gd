@@ -98,9 +98,9 @@ func _test_level_facts() -> void:
 		"addition 4 and 5 together cover every two-digit + 2..9 fact")
 	# subtraction mirrors addition: each addition fact has exactly one take-away partner
 	_check(Problems.all_facts(Categories.level(&"subtraction", 1)).size() == 21, "from 5 or less is 21 facts")
-	# ...and loses its − 0s and − 1s the same way: 2..10 take away 2 up to itself
-	_check(Problems.all_facts(Categories.level(&"subtraction", 2)).size() == 45, "from 10 or less without − 0, − 1 is 45 facts")
-	_check(Problems.all_facts(Categories.level(&"subtraction", 3)).size() == 99, "up to 20 − 10 without − 0, − 1 is 99 facts")
+	# ...and loses its − 0s and − 1s the same way, plus n − n: 3..10 take away 2 up to one less
+	_check(Problems.all_facts(Categories.level(&"subtraction", 2)).size() == 36, "from 10 or less without − 0, − 1, n − n is 36 facts")
+	_check(Problems.all_facts(Categories.level(&"subtraction", 3)).size() == 90, "up to 20 − 10 without − 0, − 1, n − n is 90 facts")
 	_check(Problems.all_facts(Categories.level(&"multiplication", 4)).size() == 121, "2..12 × 2..12 is 121 facts")
 	# division mirrors multiplication: one fact per divisor × quotient
 	_check(Problems.all_facts(Categories.level(&"division", 1)).size() == 22, "÷ 1, 2 is 22 facts")
@@ -122,10 +122,10 @@ func _test_both_orders() -> void:
 
 ## Facts with a 0 or 1 in them are level 1 practice only.
 func _test_easy_facts() -> void:
-	for spec in [[7, "+", 0], [1, "+", 8], [9, "-", 1], [6, "-", 0], [0, "*", 7], [12, "*", 1],
+	for spec in [[7, "+", 0], [1, "+", 8], [9, "-", 1], [6, "-", 0], [7, "-", 7], [0, "*", 7], [12, "*", 1],
 			[9, "/", 1], [0, "/", 4], [6, "/", 6]]:
 		_check(Problems.is_easy(Problems.make(spec[0], spec[1], spec[2])), "%d %s %d is easy" % spec)
-	for spec in [[2, "+", 2], [7, "-", 6], [7, "-", 7], [2, "*", 3], [12, "/", 6], [8, "/", 4]]:
+	for spec in [[2, "+", 2], [7, "-", 6], [2, "*", 3], [3, "*", 3], [12, "/", 6], [8, "/", 4]]:
 		_check(not Problems.is_easy(Problems.make(spec[0], spec[1], spec[2])), "%d %s %d isn't easy" % spec)
 	var add1 := {}
 	for p in Problems.all_facts(Categories.level(&"addition", 1)):

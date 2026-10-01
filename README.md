@@ -32,8 +32,8 @@ later work out what needs more practice.
 
 Answers are never negative, and division always comes out even (no remainders, never ÷ 0).
 After level 1, every level leaves out the very easy facts, the ones with a 0 or 1 in them: n + 0,
-n + 1, n − 0, n − 1, n × 0, n × 1, and in division n ÷ 1, n ÷ n and 0 ÷ n. Those are level 1
-practice only.
+n + 1, n − 0, n − 1, n × 0, n × 1, and in division n ÷ 1, n ÷ n and 0 ÷ n. Any number take away
+itself (n − n) goes too. Those are level 1 practice only.
 
 Levels are defined in `data/categories.gd` by their operand ranges plus optional
 `max_result` / `no_regroup` / `regroup_only` / `both_orders` options; `Problems.is_easy` decides

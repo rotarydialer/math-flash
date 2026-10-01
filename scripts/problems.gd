@@ -66,8 +66,11 @@ static func all_facts(level_cfg: Dictionary) -> Array:
 	return facts
 
 ## A fact with a 0 or 1 in it: n + 0, n + 1, n − 0, n − 1, n × 0, n × 1. Division counts the
-## times fact it undoes (divisor × answer), so n ÷ 1, n ÷ n and 0 ÷ n are easy too.
+## times fact it undoes (divisor × answer), so n ÷ 1, n ÷ n and 0 ÷ n are easy too. And any
+## number take away itself, n − n.
 static func is_easy(p: Dictionary) -> bool:
+	if p["op"] == "-" and p["a"] == p["b"]:
+		return true
 	var numbers: Array = [p["b"], p["answer"]] if p["op"] == "/" else [p["a"], p["b"]]
 	return numbers.has(0) or numbers.has(1)
 

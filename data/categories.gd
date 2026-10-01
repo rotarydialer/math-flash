@@ -11,8 +11,9 @@ extends RefCounted
 ##   regroup_only  keep only facts that need carrying or borrowing
 ##   both_orders   also deal each fact the other way round (b op a), for times tables
 ##   hint          short range description shown under the level name
-## Every level after the first also drops the very easy facts, those with a 0 or 1 in them
-## (`Problems.is_easy`): n + 0, n − 1, n × 1, n ÷ 1, 0 ÷ n and so on are level 1 practice only.
+## Every level after the first also drops the very easy facts, those with a 0 or 1 in them, and
+## n − n (`Problems.is_easy`): n + 0, n − 1, n − n, n × 1, n ÷ 1, 0 ÷ n and so on are level 1
+## practice only.
 ## Facts with a negative answer, division by zero or a remainder are always dropped, so ranges
 ## can be written loosely (division levels give a dividend range and let the filter do the rest).
 ## Adding a category: a new entry here plus its operator in `Problems.answer` / `Problems.SYMBOLS`.
