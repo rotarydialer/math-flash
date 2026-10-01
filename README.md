@@ -13,7 +13,7 @@ later work out what needs more practice.
 | --- | --- | --- |
 | Addition | 1 | Sums to 5 (0 + 0 … 5 + 0) |
 | | 2 | Sums to 10 |
-| | 3 | Both numbers 0–10 (up to 10 + 10) |
+| | 3 | Both numbers up to 10 (up to 10 + 10) |
 | | 4 | Two digits + one digit, no carrying (e.g. 23 + 4) |
 | | 5 | Two digits + one digit, with carrying (e.g. 27 + 5) |
 | | 6 | Two digits + two digits, no carrying (e.g. 23 + 45) |
@@ -24,16 +24,20 @@ later work out what needs more practice.
 | Multiplication | 1 | Times 0, 1, 2 (both ways round: 7 × 2 and 2 × 7) |
 | | 2 | Times 3, 4, 5 (both ways round) |
 | | 3 | Times 6 to 9 (both ways round) |
-| | 4 | Everything up to 12 × 12, except × 1 |
+| | 4 | Everything up to 12 × 12 |
 | Division | 1 | Divide by 1 and 2 (answers 0–10) |
 | | 2 | Divide by 3, 4, 5 |
 | | 3 | Divide by 6 to 9 |
-| | 4 | Everything up to 144 ÷ 12, except ÷ 1 and answers of 1 |
+| | 4 | Everything up to 144 ÷ 12 |
 
 Answers are never negative, and division always comes out even (no remainders, never ÷ 0).
+After level 1, every level leaves out the very easy facts, the ones with a 0 or 1 in them: n + 0,
+n + 1, n − 0, n − 1, n × 0, n × 1, and in division n ÷ 1, n ÷ n and 0 ÷ n. Those are level 1
+practice only.
 
 Levels are defined in `data/categories.gd` by their operand ranges plus optional
-`max_result` / `no_regroup` / `regroup_only` / `both_orders` / `skip_numbers` options. To add a new category, add an entry
+`max_result` / `no_regroup` / `regroup_only` / `both_orders` options; `Problems.is_easy` decides
+what counts as too easy after level 1. To add a new category, add an entry
 there and its operator in `Problems.answer` / `Problems.SYMBOLS`. The menu picks it up
 automatically.
 

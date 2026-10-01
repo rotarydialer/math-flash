@@ -54,8 +54,7 @@ static func all_facts(level_cfg: Dictionary) -> Array:
 		seen[p["key"]] = true
 		if p["answer"] < 0:
 			continue
-		var skip: Array = level_cfg.get("skip_numbers", [])
-		if skip.has(a) or skip.has(b) or skip.has(p["answer"]):
+		if level_cfg.get("skip_easy", false) and is_easy(p):
 			continue
 		if level_cfg.has("max_result") and p["answer"] > level_cfg["max_result"]:
 			continue
@@ -65,6 +64,12 @@ static func all_facts(level_cfg: Dictionary) -> Array:
 			continue
 		facts.append(p)
 	return facts
+
+## A fact with a 0 or 1 in it: n + 0, n + 1, n − 0, n − 1, n × 0, n × 1. Division counts the
+## times fact it undoes (divisor × answer), so n ÷ 1, n ÷ n and 0 ÷ n are easy too.
+static func is_easy(p: Dictionary) -> bool:
+	var numbers: Array = [p["b"], p["answer"]] if p["op"] == "/" else [p["a"], p["b"]]
+	return numbers.has(0) or numbers.has(1)
 
 ## True when working column by column would carry (addition) or borrow (subtraction).
 static func _regroups(a: int, op: String, b: int) -> bool:

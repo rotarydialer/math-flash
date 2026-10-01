@@ -23,6 +23,7 @@ func _initialize() -> void:
 	_test_level_lookup()
 	_test_level_facts()
 	_test_both_orders()
+	_test_easy_facts()
 	_test_regrouping()
 	_test_deal()
 	_test_deal_small_level()
@@ -78,8 +79,8 @@ func _test_level_facts() -> void:
 					ok = ok and p["answer"] <= cfg["max_result"]
 				if cfg.get("no_regroup", false):
 					ok = ok and not Problems._regroups(p["a"], cfg["op"], p["b"])
-				for skip in cfg.get("skip_numbers", []):
-					ok = ok and p["a"] != skip and p["b"] != skip and p["answer"] != skip
+				if n > 1:
+					ok = ok and not Problems.is_easy(p)
 				if cfg["op"] == "/":
 					ok = ok and p["b"] != 0 and p["answer"] * p["b"] == p["a"]
 				if cfg.get("regroup_only", false):
@@ -88,23 +89,24 @@ func _test_level_facts() -> void:
 			_check(ok, "%s facts are in range with correct, non-negative answers" % name)
 			_check(keys.size() == facts.size(), "%s facts are all distinct" % name)
 	_check(Problems.all_facts(Categories.level(&"addition", 1)).size() == 21, "sums to 5 is 21 facts")
-	_check(Problems.all_facts(Categories.level(&"addition", 2)).size() == 66, "sums to 10 is 66 facts")
-	_check(Problems.all_facts(Categories.level(&"addition", 3)).size() == 121, "0..10 + 0..10 is 121 facts")
-	# levels 4 and 5 split two-digit + one-digit exactly into no-carry and carry
+	# after level 1, no 0s or 1s: 2..8 + 2..8 with sums to 10
+	_check(Problems.all_facts(Categories.level(&"addition", 2)).size() == 28, "sums to 10 without 0s and 1s is 28 facts")
+	_check(Problems.all_facts(Categories.level(&"addition", 3)).size() == 81, "2..10 + 2..10 is 81 facts")
+	# levels 4 and 5 split two-digit + one-digit (2..9) exactly into no-carry and carry
 	_check(Problems.all_facts(Categories.level(&"addition", 4)).size()
-		+ Problems.all_facts(Categories.level(&"addition", 5)).size() == 90 * 9,
-		"addition 4 and 5 together cover every two-digit + one-digit fact")
+		+ Problems.all_facts(Categories.level(&"addition", 5)).size() == 90 * 8,
+		"addition 4 and 5 together cover every two-digit + 2..9 fact")
 	# subtraction mirrors addition: each addition fact has exactly one take-away partner
 	_check(Problems.all_facts(Categories.level(&"subtraction", 1)).size() == 21, "from 5 or less is 21 facts")
-	_check(Problems.all_facts(Categories.level(&"subtraction", 2)).size() == 66, "from 10 or less is 66 facts")
-	_check(Problems.all_facts(Categories.level(&"subtraction", 3)).size() == 121, "up to 20 − 10 is 121 facts")
-	# 13 × 13 = 169, less the 25 facts with a 1 in them
-	_check(Problems.all_facts(Categories.level(&"multiplication", 4)).size() == 144, "up to 12 × 12 without × 1 is 144 facts")
+	# ...and loses its − 0s and − 1s the same way: 2..10 take away 2 up to itself
+	_check(Problems.all_facts(Categories.level(&"subtraction", 2)).size() == 45, "from 10 or less without − 0, − 1 is 45 facts")
+	_check(Problems.all_facts(Categories.level(&"subtraction", 3)).size() == 99, "up to 20 − 10 without − 0, − 1 is 99 facts")
+	_check(Problems.all_facts(Categories.level(&"multiplication", 4)).size() == 121, "2..12 × 2..12 is 121 facts")
 	# division mirrors multiplication: one fact per divisor × quotient
 	_check(Problems.all_facts(Categories.level(&"division", 1)).size() == 22, "÷ 1, 2 is 22 facts")
-	_check(Problems.all_facts(Categories.level(&"division", 3)).size() == 44, "÷ 6 to 9 is 44 facts")
-	# divisors 2..12 × quotients 0 and 2..12
-	_check(Problems.all_facts(Categories.level(&"division", 4)).size() == 132, "up to 144 ÷ 12 without 1s is 132 facts")
+	# divisors × quotients 2..10, now that 0 ÷ n and n ÷ n are level 1 only
+	_check(Problems.all_facts(Categories.level(&"division", 3)).size() == 36, "÷ 6 to 9 is 36 facts")
+	_check(Problems.all_facts(Categories.level(&"division", 4)).size() == 121, "divisors and quotients 2..12 is 121 facts")
 	_check(Problems.all_facts({"op": "/", "a": [0, 5], "b": [0, 0]}).is_empty(), "nothing is ever divided by zero")
 
 ## A times-table level deals both orders once each, and nothing outside its tables.
@@ -117,6 +119,22 @@ func _test_both_orders() -> void:
 	_check(not keys.has("7*3") and not keys.has("3*7"), "facts from other tables stay out")
 	# 0..10 × 0..2 is 33; flipping adds 3..10 × 0..2 the other way round, 24 more
 	_check(keys.size() == 57, "times 0, 1, 2 is 57 facts in both orders")
+
+## Facts with a 0 or 1 in them are level 1 practice only.
+func _test_easy_facts() -> void:
+	for spec in [[7, "+", 0], [1, "+", 8], [9, "-", 1], [6, "-", 0], [0, "*", 7], [12, "*", 1],
+			[9, "/", 1], [0, "/", 4], [6, "/", 6]]:
+		_check(Problems.is_easy(Problems.make(spec[0], spec[1], spec[2])), "%d %s %d is easy" % spec)
+	for spec in [[2, "+", 2], [7, "-", 6], [7, "-", 7], [2, "*", 3], [12, "/", 6], [8, "/", 4]]:
+		_check(not Problems.is_easy(Problems.make(spec[0], spec[1], spec[2])), "%d %s %d isn't easy" % spec)
+	var add1 := {}
+	for p in Problems.all_facts(Categories.level(&"addition", 1)):
+		add1[p["key"]] = true
+	_check(add1.has("4+1") and add1.has("0+5"), "level 1 keeps its easy facts")
+	var times2 := {}
+	for p in Problems.all_facts(Categories.level(&"multiplication", 2)):
+		times2[p["key"]] = true
+	_check(times2.has("3*2") and not times2.has("3*1") and not times2.has("0*4"), "times 3, 4, 5 drops × 0 and × 1")
 
 static func _in(v: int, r: Array) -> bool:
 	return v >= r[0] and v <= r[1]
@@ -194,6 +212,8 @@ func _test_stats() -> void:
 		"...and not for another level that shares the fact")
 	_check(stats.level_summary(Categories.level(&"addition", 3))["right"] == 0, "...nor a level never played")
 	_check(stats.fact("2+3")["right"] == 1, "the fact's own history still has the answer")
+	stats.record(Problems.make(5, "+", 1), true, add2)   # dealt at level 2 before it lost its easy facts
+	_check(stats.level_summary(add2)["seen"] == 1, "facts a level no longer deals don't count as tried")
 	var other := StatsScript.new()
 	other.profile_id = "unit_test_other"
 	_check(other.fact("3+4")["right"] == 0, "profiles keep separate histories")

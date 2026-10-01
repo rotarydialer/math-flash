@@ -63,11 +63,15 @@ func fact(key: String) -> Dictionary:
 ## {right, wrong, seen (facts answered at least once), facts (in the level)}.
 func level_summary(level_cfg: Dictionary) -> Dictionary:
 	var section := level_section(level_cfg)
+	var seen := PackedStringArray(_cfg.get_value(section, "seen", PackedStringArray()))
+	var facts := Problems.all_facts(level_cfg)
+	# only facts the level still deals, in case its definition has changed since
+	var tried := facts.filter(func(p: Dictionary) -> bool: return p["key"] in seen).size()
 	return {
 		"right": int(_cfg.get_value(section, "right", 0)),
 		"wrong": int(_cfg.get_value(section, "wrong", 0)),
-		"seen": PackedStringArray(_cfg.get_value(section, "seen", PackedStringArray())).size(),
-		"facts": Problems.all_facts(level_cfg).size(),
+		"seen": tried,
+		"facts": facts.size(),
 	}
 
 ## Wipes the current profile's history (tests use a throwaway profile and clear it).
