@@ -56,7 +56,7 @@ static func all_facts(level_cfg: Dictionary) -> Array:
 			continue
 		if level_cfg.get("skip_easy", false) and is_easy(p):
 			continue
-		if level_cfg.has("max_result") and p["answer"] > level_cfg["max_result"]:
+		if level_cfg.has("max_result") and p["answer"] > _max_result(level_cfg, p):
 			continue
 		if level_cfg.get("no_regroup", false) and _regroups(a, op, b):
 			continue
@@ -64,6 +64,11 @@ static func all_facts(level_cfg: Dictionary) -> Array:
 			continue
 		facts.append(p)
 	return facts
+
+static func _max_result(level_cfg: Dictionary, p: Dictionary) -> int:
+	if level_cfg.has("easy_max_result") and is_easy(p):
+		return level_cfg["easy_max_result"]
+	return level_cfg["max_result"]
 
 ## A fact with a 0 or 1 in it: n + 0, n + 1, n − 0, n − 1, n × 0, n × 1. Division counts the
 ## times fact it undoes (divisor × answer), so n ÷ 1, n ÷ n and 0 ÷ n are easy too. And any

@@ -11,7 +11,7 @@ later work out what needs more practice.
 
 | Category | Level | Facts |
 | --- | --- | --- |
-| Addition | 1 | Sums to 5 (0 + 0 … 5 + 0) |
+| Addition | 1 | Sums to 5 (0 + 0 … 5 + 0), plus + 0 and + 1 up to 10 (7 + 0, 9 + 1, 1 + 8) |
 | | 2 | Sums to 10 |
 | | 3 | Both numbers up to 10 (up to 10 + 10) |
 | | 4 | Two digits + one digit, no carrying (e.g. 23 + 4) |
@@ -36,7 +36,7 @@ n + 1, n − 0, n − 1, n × 0, n × 1, and in division n ÷ 1, n ÷ n and 0 ÷
 itself (n − n) goes too. Those are level 1 practice only.
 
 Levels are defined in `data/categories.gd` by their operand ranges plus optional
-`max_result` / `no_regroup` / `regroup_only` / `both_orders` options; `Problems.is_easy` decides
+`max_result` / `easy_max_result` / `no_regroup` / `regroup_only` / `both_orders` options; `Problems.is_easy` decides
 what counts as too easy after level 1. To add a new category, add an entry
 there and its operator in `Problems.answer` / `Problems.SYMBOLS`. The menu picks it up
 automatically.

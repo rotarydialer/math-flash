@@ -76,7 +76,7 @@ func _test_level_facts() -> void:
 				ok = ok and p["answer"] == Problems.answer(p["a"], cfg["op"], p["b"])
 				ok = ok and p["answer"] >= 0
 				if cfg.has("max_result"):
-					ok = ok and p["answer"] <= cfg["max_result"]
+					ok = ok and p["answer"] <= Problems._max_result(cfg, p)
 				if cfg.get("no_regroup", false):
 					ok = ok and not Problems._regroups(p["a"], cfg["op"], p["b"])
 				if n > 1:
@@ -88,7 +88,8 @@ func _test_level_facts() -> void:
 				keys[p["key"]] = true
 			_check(ok, "%s facts are in range with correct, non-negative answers" % name)
 			_check(keys.size() == facts.size(), "%s facts are all distinct" % name)
-	_check(Problems.all_facts(Categories.level(&"addition", 1)).size() == 21, "sums to 5 is 21 facts")
+	# sums to 5, plus n + 0, 0 + n, n + 1, 1 + n with sums 6..10
+	_check(Problems.all_facts(Categories.level(&"addition", 1)).size() == 41, "sums to 5, + 0 and + 1 to 10 is 41 facts")
 	# after level 1, no 0s or 1s: 2..8 + 2..8 with sums to 10
 	_check(Problems.all_facts(Categories.level(&"addition", 2)).size() == 28, "sums to 10 without 0s and 1s is 28 facts")
 	_check(Problems.all_facts(Categories.level(&"addition", 3)).size() == 81, "2..10 + 2..10 is 81 facts")
@@ -131,6 +132,8 @@ func _test_easy_facts() -> void:
 	for p in Problems.all_facts(Categories.level(&"addition", 1)):
 		add1[p["key"]] = true
 	_check(add1.has("4+1") and add1.has("0+5"), "level 1 keeps its easy facts")
+	_check(add1.has("9+1") and add1.has("1+9") and add1.has("10+0") and add1.has("0+7"), "addition 1 has + 0 and + 1 up to 10")
+	_check(not add1.has("6+2") and not add1.has("10+1"), "...but no other sums over 5, and nothing over 10")
 	var times2 := {}
 	for p in Problems.all_facts(Categories.level(&"multiplication", 2)):
 		times2[p["key"]] = true

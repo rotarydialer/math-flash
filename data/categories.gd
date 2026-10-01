@@ -7,6 +7,7 @@ extends RefCounted
 ## Each level may set:
 ##   a, b          inclusive [lo, hi] range for each operand
 ##   max_result    drop facts whose answer is above this
+##   easy_max_result  ...except easy facts (see below), which may go up to this instead
 ##   no_regroup    drop facts that need carrying or borrowing in any column
 ##   regroup_only  keep only facts that need carrying or borrowing
 ##   both_orders   also deal each fact the other way round (b op a), for times tables
@@ -24,7 +25,7 @@ static var DATA := [
 		"name": "Addition",
 		"op": "+",
 		"levels": [
-			{"hint": "Sums to 5", "a": [0, 5], "b": [0, 5], "max_result": 5},
+			{"hint": "Sums to 5, + 0, + 1", "a": [0, 10], "b": [0, 10], "max_result": 5, "easy_max_result": 10},
 			{"hint": "Sums to 10", "a": [0, 10], "b": [0, 10], "max_result": 10},
 			{"hint": "Up to 10 + 10", "a": [0, 10], "b": [0, 10]},
 			{"hint": "Two digits + one", "a": [10, 99], "b": [1, 9], "no_regroup": true},
