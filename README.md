@@ -11,9 +11,9 @@ later work out what needs more practice.
 
 | Category | Level | Facts |
 | --- | --- | --- |
-| Addition | 1 | Sums to 5 (0 + 0 … 5 + 0) |
+| Addition | 1 | Sums to 5 (0 + 0 … 5 + 0), plus + 0 and + 1 up to 10 (7 + 0, 9 + 1, 1 + 8) |
 | | 2 | Sums to 10 |
-| | 3 | Both numbers 0–10 (up to 10 + 10) |
+| | 3 | Both numbers up to 10 (up to 10 + 10) |
 | | 4 | Two digits + one digit, no carrying (e.g. 23 + 4) |
 | | 5 | Two digits + one digit, with carrying (e.g. 27 + 5) |
 | | 6 | Two digits + two digits, no carrying (e.g. 23 + 45) |
@@ -24,25 +24,62 @@ later work out what needs more practice.
 | Multiplication | 1 | Times 0, 1, 2 (both ways round: 7 × 2 and 2 × 7) |
 | | 2 | Times 3, 4, 5 (both ways round) |
 | | 3 | Times 6 to 9 (both ways round) |
-| | 4 | Everything up to 12 × 12, except × 1 |
+| | 4 | Everything up to 12 × 12 |
 | Division | 1 | Divide by 1 and 2 (answers 0–10) |
 | | 2 | Divide by 3, 4, 5 |
 | | 3 | Divide by 6 to 9 |
-| | 4 | Everything up to 144 ÷ 12, except ÷ 1 and answers of 1 |
+| | 4 | Everything up to 144 ÷ 12 |
 
 Answers are never negative, and division always comes out even (no remainders, never ÷ 0).
+After level 1, every level leaves out the very easy facts, the ones with a 0 or 1 in them: n + 0,
+n + 1, n − 0, n − 1, n × 0, n × 1, and in division n ÷ 1, n ÷ n and 0 ÷ n. Any number take away
+itself (n − n) goes too. Those are level 1 practice only.
 
 Levels are defined in `data/categories.gd` by their operand ranges plus optional
-`max_result` / `no_regroup` / `regroup_only` / `both_orders` / `skip_numbers` options. To add a new category, add an entry
+`max_result` / `easy_max_result` / `no_regroup` / `regroup_only` / `both_orders` options; `Problems.is_easy` decides
+what counts as too easy after level 1. To add a new category, add an entry
 there and its operator in `Problems.answer` / `Problems.SYMBOLS`. The menu picks it up
 automatically.
 
 ## Stats & profiles
 
-`scripts/stats.gd` saves each answer to `user://stats_<profile>.cfg`, with one section per fact
-key (`"3+4"`) holding `right`, `wrong`, `recent` (the last 10 answers) and `last_seen`. Each
-menu button shows that level's accuracy. For now everything goes to the `"default"` profile;
-supporting more students just needs a picker that sets `Stats.profile_id`.
+Each student has a profile. The first launch asks "Who's playing?"; after that the app opens as
+whoever played last, and the name button in the menu's top corner switches players or adds a new one.
+A player can have a picture, chosen when they're added; without one they get their initial. Each
+player's Edit button renames them, changes their picture, or deletes them. Deleting asks first, and
+takes their stats with them; renaming keeps them, since the stats file is named by id.
+
+`scripts/profiles.gd` keeps the list in `user://profiles.cfg`: each profile's `id`, `name` and
+`picture` (a file name in `profiles/images/`, or `""`), plus which one is `current`. The id is fixed when the profile is made and names its stats file,
+so a name can be anything (up to 12 characters, no duplicates).
+
+`scripts/stats.gd` saves each answer to `user://stats_<id>.cfg`, with one section per fact
+key (`"3+4"`) holding `right`, `wrong`, `recent` (the last 10 answers) and `last_seen`.
+Levels share facts (every Addition 1 fact is also in Addition 2 and 3), so each level also keeps
+its own `right`, `wrong` and `seen` (fact keys) in a `level:<category>:<n>` section. Each menu
+button shows only the answers given in that level, and says "New!" until the student plays it.
+The button fills like a bar: as far across as the share of the level's facts tried, split into
+green (`PROGRESS_RIGHT`) and red (`PROGRESS_WRONG`) by how those answers went; both colours are in
+`data/config.gd`. History saved before profiles
+existed (`stats_default.cfg`) goes to the first profile created.
+
+### Profile pictures
+
+The pictures to choose from are whatever images (`.png`, `.jpg`, `.webp`, `.svg`) are in
+`profiles/images/`. That folder is gitignored, so the pictures stay private and each checkout
+brings its own. There's no extra build step: the export packs everything Godot has imported, so drop
+the files in and export as usual (below). They're shown cropped to a centred circle, so
+roughly square pictures with the subject in the middle work best.
+
+Textures import at most 512 px on a side (`[importer_defaults]` in `project.godot`) so photos
+don't bloat the APK. That default only applies to newly imported files; to re-import pictures
+that went in before it, delete their `.import` files and import again:
+
+```sh
+rm profiles/images/*.import && godot --headless --path . --import
+```
+
+A profile whose picture file has been removed just shows the initial again.
 
 ## Project layout
 
@@ -52,13 +89,18 @@ supporting more students just needs a picker that sets `Stats.profile_id`.
 | `data/categories.gd` | Categories and their levels |
 | `scripts/problems.gd` | Pure problem generation: every fact in a level, plus the seeded deal. No nodes, so it can be tested headless |
 | `scripts/round.gd` | Pure model of one round: the deck, the current card, and the results |
-| `scripts/game_state.gd` | Autoload: which screen is up, the current round, and the signals |
+| `scripts/game_state.gd` | Autoload: which screen is up, the current round, switching profiles, and the signals |
+| `scripts/profiles.gd` | Autoload: the students' profiles and who's playing |
 | `scripts/stats.gd` | Autoload: per-profile, per-fact answer history |
+| `scripts/profile_screen.gd` | "Who's playing?": pick a player, add one, or edit one (rename, picture, delete) |
 | `scripts/menu_screen.gd` | Two-page picker: categories, then that category's levels |
 | `scripts/play_screen.gd` | Card, ✗ / ✓ buttons, and the end-of-round summary |
 | `scripts/card.gd`, `scripts/answer_button.gd` | Placeholder art drawn in code |
+| `scripts/progress_button.gd` | A button with a right/wrong bar behind its text (the level list's progress) |
+| `scripts/avatar.gd`, `scripts/profile_button.gd` | A profile picture cropped to a circle (or the initial), and a button with one beside a name |
+| `profiles/images/` | Profile pictures to choose from (gitignored) |
 | `scripts/ui_theme.gd` | Shared button and label styling |
-| `tests/` | Headless logic tests and a bot playtest |
+| `tests/` | Headless logic tests and a bot playtest (`tests/fixtures/pictures/` stands in for `profiles/images/`) |
 
 ## Run
 

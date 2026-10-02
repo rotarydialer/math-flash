@@ -1,7 +1,7 @@
 class_name UiTheme
 extends RefCounted
 
-## The shared look for buttons and labels: big, rounded, high-contrast, finger-sized.
+## The shared look for buttons, labels and text boxes: big, rounded, high-contrast, finger-sized.
 ## Screens set `theme = UiTheme.build()` on their root so every child inherits it.
 
 const Config := preload("res://data/config.gd")
@@ -27,6 +27,12 @@ static func build() -> Theme:
 	_theme.set_stylebox("pressed", "Button", _box(BUTTON_PRESSED))
 	_theme.set_stylebox("hover_pressed", "Button", _box(BUTTON_PRESSED))
 	_theme.set_stylebox("focus", "Button", StyleBoxEmpty.new())
+	_theme.set_color("font_color", "LineEdit", Config.INK)
+	_theme.set_color("font_placeholder_color", "LineEdit", Color(Config.INK, 0.45))
+	_theme.set_color("caret_color", "LineEdit", Config.INK)
+	_theme.set_font_size("font_size", "LineEdit", Config.FONT_BUTTON)
+	_theme.set_stylebox("normal", "LineEdit", _box(BUTTON))
+	_theme.set_stylebox("focus", "LineEdit", StyleBoxEmpty.new())
 	return _theme
 
 static func _box(fill: Color) -> StyleBoxFlat:
