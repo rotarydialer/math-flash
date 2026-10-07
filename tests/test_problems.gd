@@ -27,6 +27,7 @@ func _initialize() -> void:
 	_test_regrouping()
 	_test_deal()
 	_test_deal_small_level()
+	_test_deal_steering()
 	_test_round()
 	_test_stats()
 	_test_profiles()
@@ -167,6 +168,53 @@ func _test_deal_small_level() -> void:
 	var deck := Problems.deal(cfg, 20, 1)
 	_check(deck.size() == 4, "a level smaller than the deck deals each fact once")
 
+## Untried and missed facts get places in the deck, however the shuffle falls.
+func _test_deal_steering() -> void:
+	var cfg := Categories.level(&"multiplication", 3)
+	var keys: Array = Problems.all_facts(cfg).map(func(p: Dictionary) -> String: return p["key"])
+	var quota := ceili(Config.DECK_SIZE * Config.UNTRIED_SHARE)
+	var last_untried := true
+	var some_untried := true
+	var missed_in := true
+	var missed_first := true
+	var tidy := true
+	for seed_value in 30:
+		# 55 of 56 tried: the one left always comes up
+		var deck := Problems.deal(cfg, Config.DECK_SIZE, seed_value, {"tried": keys.slice(1)})
+		last_untried = last_untried and _keys(deck).has(keys[0])
+		# 10 untried: at least a quarter of the deck is them
+		deck = Problems.deal(cfg, Config.DECK_SIZE, seed_value, {"tried": keys.slice(10)})
+		some_untried = some_untried and _keys(deck).filter(func(k: String) -> bool: return keys.find(k) < 10).size() >= quota
+		# 6 missed: at least 3 of them, alongside the untried quota
+		var missed := keys.slice(20, 26)
+		deck = Problems.deal(cfg, Config.DECK_SIZE, seed_value, {"tried": keys.slice(10), "missed": missed})
+		var dealt := _keys(deck)
+		missed_in = missed_in and dealt.filter(func(k: String) -> bool: return missed.has(k)).size() >= Config.MIN_MISSED
+		missed_in = missed_in and dealt.filter(func(k: String) -> bool: return keys.find(k) < 10).size() >= quota
+		# still wrong last time beats got right since
+		deck = Problems.deal(cfg, Config.DECK_SIZE, seed_value, {"missed": [keys[30]], "shaky": keys.slice(40, 50)})
+		dealt = _keys(deck)
+		missed_first = missed_first and dealt.has(keys[30])
+		missed_first = missed_first and dealt.filter(func(k: String) -> bool: return keys.find(k) >= 40 and keys.find(k) < 50).size() >= Config.MIN_MISSED - 1
+		# keys from other levels are ignored; the deck stays full and distinct
+		deck = Problems.deal(cfg, Config.DECK_SIZE, seed_value, {"tried": keys, "missed": ["1+1", "2*2"]})
+		var unique := {}
+		for k in _keys(deck):
+			unique[k] = true
+		tidy = tidy and deck.size() == Config.DECK_SIZE and unique.size() == deck.size()
+	_check(last_untried, "the last untried fact always makes the deck")
+	_check(some_untried, "at least %d%% of a deck is untried facts while there are enough" % roundi(Config.UNTRIED_SHARE * 100))
+	_check(missed_in, "at least %d missed facts make the deck, as well as the untried ones" % Config.MIN_MISSED)
+	_check(missed_first, "facts still wrong come before ones got right since")
+	_check(tidy, "other levels' keys are ignored and the deck stays full and distinct")
+	var small := Problems.deal({"op": "+", "a": [0, 1], "b": [0, 1]}, 20, 1, {"missed": ["0+0", "1+1"], "shaky": ["0+1"]})
+	_check(_keys(small).size() == 4, "a small level still deals each fact once with a history")
+	var history := {"tried": keys.slice(5), "missed": keys.slice(30, 34)}
+	_check(str(Problems.deal(cfg, 20, 9, history)) == str(Problems.deal(cfg, 20, 9, history)), "same seed and history, same deck")
+
+static func _keys(deck: Array) -> Array:
+	return deck.map(func(p: Dictionary) -> String: return p["key"])
+
 func _test_round() -> void:
 	var r := FlashRound.new(Problems.deal(Categories.level(&"addition", 1), 5, 3))
 	_check(r.size() == 5 and r.index == 0 and not r.is_done(), "a new round starts at card 0")
@@ -215,6 +263,12 @@ func _test_stats() -> void:
 		"...and not for another level that shares the fact")
 	_check(stats.level_summary(Categories.level(&"addition", 3))["right"] == 0, "...nor a level never played")
 	_check(stats.fact("2+3")["right"] == 1, "the fact's own history still has the answer")
+	var history: Dictionary = stats.practice_history(add2)
+	_check(history["tried"] == ["3+4"], "practice history lists the facts tried in the level")
+	_check(history["missed"] == ["3+4"] and history["shaky"].is_empty(), "a fact whose last answer was wrong is missed")
+	stats.record(p, true, add2)
+	history = stats.practice_history(add2)
+	_check(history["missed"].is_empty() and history["shaky"] == ["3+4"], "...and shaky once it's been got right since")
 	stats.record(Problems.make(5, "+", 1), true, add2)   # dealt at level 2 before it lost its easy facts
 	_check(stats.level_summary(add2)["seen"] == 1, "facts a level no longer deals don't count as tried")
 	var other := StatsScript.new()

@@ -10,6 +10,7 @@ extends Node2D
 ##   godot --headless --path . res://tests/Playtest.tscn
 ## Prints PLAYTEST PASSED / FAILED; exit code = number of failing checks.
 
+const Config := preload("res://data/config.gd")
 const MAX_SETTLE_FRAMES := 300
 
 var _failures := 0
@@ -49,9 +50,11 @@ func _run() -> void:
 	get_tree().quit(_failures)
 
 func _play_level(category_id: StringName, n: int) -> void:
+	var history := Stats.practice_history(Categories.level(category_id, n))
 	GameState.start_round(category_id, n)
 	var cfg := GameState.level_cfg
 	var total := GameState.current_round.size()
+	_check_deck_steering(n, history)
 	var before: Dictionary = Stats.level_summary(cfg)
 	var expected_score := 0
 	for i in total:
@@ -86,6 +89,20 @@ func _play_level(category_id: StringName, n: int) -> void:
 	if n < Categories.level_count(category_id):
 		var next := _menu._list.get_child(n) as ProgressButton
 		_check(next.right == 0.0 and next.wrong == 0.0, "L%d: the next level, not played yet, has no bar" % n)
+
+## The round just dealt has its share of untried and previously missed facts.
+func _check_deck_steering(n: int, history: Dictionary) -> void:
+	var dealt := {}
+	for p in GameState.current_round.deck:
+		dealt[p["key"]] = true
+	var total := GameState.current_round.size()
+	var missed: Array = history["missed"] + history["shaky"]
+	var missed_dealt := missed.filter(func(k: String) -> bool: return dealt.has(k)).size()
+	_check(missed_dealt >= mini(Config.MIN_MISSED, missed.size()), "L%d: the deck has its missed facts" % n)
+	var untried := Problems.all_facts(GameState.level_cfg).filter(
+		func(p: Dictionary) -> bool: return not p["key"] in history["tried"])
+	var untried_dealt := untried.filter(func(p: Dictionary) -> bool: return dealt.has(p["key"])).size()
+	_check(untried_dealt >= mini(ceili(total * Config.UNTRIED_SHARE), untried.size()), "L%d: the deck has its untried facts" % n)
 
 ## The top page lists categories; a category button opens its levels; Back returns.
 func _check_menu() -> void:

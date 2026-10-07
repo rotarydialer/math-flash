@@ -31,6 +31,11 @@ later work out what needs more practice.
 | | 4 | Everything up to 144 ÷ 12 |
 
 Answers are never negative, and division always comes out even (no remainders, never ÷ 0).
+
+Rounds are dealt at random, but steered by the student's history so practice keeps moving: at
+least a quarter of the cards are facts they haven't tried yet in that level (while any are left),
+and at least 3 are facts they've got wrong before, those still wrong last time first. Both numbers
+are `UNTRIED_SHARE` and `MIN_MISSED` in `data/config.gd`.
 After level 1, every level leaves out the very easy facts, the ones with a 0 or 1 in them: n + 0,
 n + 1, n − 0, n − 1, n × 0, n × 1, and in division n ÷ 1, n ÷ n and 0 ÷ n. Any number take away
 itself (n − n) goes too. Those are level 1 practice only.

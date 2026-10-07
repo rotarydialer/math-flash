@@ -72,7 +72,8 @@ func to_menu() -> void:
 
 func start_round(category_id: StringName, level_number: int) -> void:
 	level_cfg = Categories.level(category_id, level_number)
-	current_round = FlashRound.new(Problems.deal(level_cfg, Config.DECK_SIZE, randi()))
+	var history := Stats.practice_history(level_cfg)
+	current_round = FlashRound.new(Problems.deal(level_cfg, Config.DECK_SIZE, randi(), history))
 	state = State.PLAYING
 	round_started.emit(level_cfg, current_round.size())
 	_show_card()

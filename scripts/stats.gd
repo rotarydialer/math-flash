@@ -74,6 +74,26 @@ func level_summary(level_cfg: Dictionary) -> Dictionary:
 		"facts": facts.size(),
 	}
 
+## What Problems.deal needs to steer a deck for this level: `tried`, the fact keys answered in
+## this level; `missed`, the level's facts whose latest answer (in any level) was wrong; and
+## `shaky`, ones got wrong before but right since.
+func practice_history(level_cfg: Dictionary) -> Dictionary:
+	var missed: Array[String] = []
+	var shaky: Array[String] = []
+	for p in Problems.all_facts(level_cfg):
+		if not _cfg.has_section(p["key"]):
+			continue
+		var f := fact(p["key"])
+		if f["wrong"] == 0:
+			continue
+		var recent: Array = f["recent"]
+		if not recent.is_empty() and recent.back() == false:
+			missed.append(p["key"])
+		else:
+			shaky.append(p["key"])
+	var seen := PackedStringArray(_cfg.get_value(level_section(level_cfg), "seen", PackedStringArray()))
+	return {"tried": Array(seen), "missed": missed, "shaky": shaky}
+
 ## Wipes the current profile's history (tests use a throwaway profile and clear it).
 func clear() -> void:
 	_cfg = ConfigFile.new()

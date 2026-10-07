@@ -9,6 +9,8 @@ extends RefCounted
 # --- Rounds ------------------------------------------------------------------
 const DECK_SIZE := 20             # cards per round (a smaller level uses each fact once)
 const RECENT_HISTORY := 10        # most recent right/wrong answers kept per fact
+const UNTRIED_SHARE := 0.25       # at least this share of a deck is facts not yet tried in the level (while any are left)
+const MIN_MISSED := 3             # ...and at least this many facts the student has got wrong before (if there are any)
 
 # --- Layout ------------------------------------------------------------------
 const VIEWPORT_W := 720.0

@@ -4,6 +4,8 @@ extends RefCounted
 ## Pure problem generation — no nodes, so it runs headless in tests. A problem is a Dictionary
 ## `{a, b, op, answer, key}`; `key` (e.g. "3+4", "7-2") is how Stats files answers for that fact.
 
+const Config := preload("res://data/config.gd")
+
 ## How each operator is shown on a card (a true minus sign reads better than a hyphen).
 const SYMBOLS := {"+": "+", "-": "−", "*": "×", "/": "÷"}
 
@@ -91,13 +93,42 @@ static func _regroups(a: int, op: String, b: int) -> bool:
 	return false
 
 ## A shuffled deck of up to `size` distinct problems from the level (a level with fewer facts
-## than that deals each one once). Same seed, same deck.
-static func deal(level_cfg: Dictionary, size: int, seed_value: int) -> Array:
+## than that deals each one once). Same seed and history, same deck.
+##
+## `history` (from Stats.practice_history) steers it so practice keeps moving: `tried` lists the
+## fact keys already answered in this level, and `missed` / `shaky` the keys got wrong before
+## (still wrong last time / right since). The deck holds at least Config.MIN_MISSED of those,
+## missed first, and at least Config.UNTRIED_SHARE of it is untried facts, as far as there are
+## enough of each; the rest is drawn at random.
+static func deal(level_cfg: Dictionary, size: int, seed_value: int, history := {}) -> Array:
 	var facts := all_facts(level_cfg)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	_shuffle(facts, rng)
-	return facts.slice(0, mini(size, facts.size()))
+	size = mini(size, facts.size())
+	var tried := {}
+	for key in history.get("tried", []):
+		tried[key] = true
+	var by_key := {}
+	for p in facts:
+		by_key[p["key"]] = p
+	var deck := []
+	for group in ["missed", "shaky"]:
+		var keys: Array = Array(history.get(group, [])).filter(func(k: String) -> bool: return by_key.has(k))
+		_shuffle(keys, rng)
+		for key in keys:
+			if deck.size() < mini(Config.MIN_MISSED, size):
+				deck.append(by_key[key])
+	var untried := facts.filter(func(p: Dictionary) -> bool: return not tried.has(p["key"]))
+	deck.append_array(untried.slice(0, ceili(size * Config.UNTRIED_SHARE)))
+	for p in facts:
+		if deck.size() >= size:
+			break
+		if not deck.has(p):
+			deck.append(p)
+	deck = deck.slice(0, size)
+	_shuffle(deck, rng)
+	return deck
 
 ## Fisher–Yates on our own RNG (Array.shuffle uses the global one, which isn't seedable per deck).
 static func _shuffle(arr: Array, rng: RandomNumberGenerator) -> void:
