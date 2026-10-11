@@ -1,7 +1,8 @@
 class_name MenuScreen
 extends Control
 
-## Two-page picker. The top page has one big button per category; picking one opens its level
+## Two-page picker. The top page has one big button per category, with a bar for the whole
+## category like the level buttons' (below); picking one opens its level
 ## list (with a Back button), one button per level with its range and how the student has done
 ## on it so far. The button fills like a bar: as far across as the share of facts tried, green for
 ## the % right and red for the % wrong. Rebuilt on every change so the numbers stay current. Coming back from a round
@@ -71,8 +72,9 @@ func show_categories() -> void:
 	_profile.visible = not _profile.text.is_empty()
 	_clear_list()
 	for cat in Categories.DATA:
-		var btn := Button.new()
+		var btn := ProgressButton.new()
 		btn.text = cat["name"]
+		_show_progress(btn, Stats.category_summary(cat["id"]))
 		btn.add_theme_font_size_override("font_size", Config.FONT_HEADER + 10)
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.custom_minimum_size = Vector2(0, 140)
@@ -95,17 +97,23 @@ func _clear_list() -> void:
 
 func _level_button(cfg: Dictionary) -> ProgressButton:
 	var s := Stats.level_summary(cfg)
-	var answered: int = s["right"] + s["wrong"]
 	var btn := ProgressButton.new()
 	btn.text = "Level %d  ·  %s\n%s" % [cfg["number"], cfg["hint"], _progress_text(s)]
-	if answered > 0:
-		var tried: float = float(s["seen"]) / s["facts"]
-		btn.right = tried * s["right"] / answered
-		btn.wrong = tried - btn.right
+	_show_progress(btn, s)
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.custom_minimum_size = Vector2(0, 130)
 	btn.pressed.connect(GameState.start_round.bind(cfg["category"], cfg["number"]))
 	return btn
+
+## Fills the bar from a level or category summary: as long as the share of facts tried, split
+## green / red by the share of answers right / wrong.
+func _show_progress(btn: ProgressButton, s: Dictionary) -> void:
+	var answered: int = s["right"] + s["wrong"]
+	if answered == 0 or s["facts"] == 0:
+		return
+	var tried: float = float(s["seen"]) / s["facts"]
+	btn.right = tried * s["right"] / answered
+	btn.wrong = tried - btn.right
 
 func _progress_text(s: Dictionary) -> String:
 	var answered: int = s["right"] + s["wrong"]

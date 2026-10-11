@@ -44,6 +44,7 @@ func _run() -> void:
 	for cat in Categories.DATA:
 		for n in range(1, Categories.level_count(cat["id"]) + 1):
 			await _play_level(cat["id"], n)
+	_check_category_bars()
 	Stats.clear()
 	print("Checks: %d  Failures: %d" % [_checks, _failures])
 	print("PLAYTEST PASSED" if _failures == 0 else "PLAYTEST FAILED")
@@ -90,6 +91,18 @@ func _play_level(category_id: StringName, n: int) -> void:
 		var next := _menu._list.get_child(n) as ProgressButton
 		_check(next.right == 0.0 and next.wrong == 0.0, "L%d: the next level, not played yet, has no bar" % n)
 
+## Every level has been played: each category's bar covers what's been tried across its levels.
+func _check_category_bars() -> void:
+	GameState.level_cfg = {}
+	GameState.to_menu()
+	for i in Categories.DATA.size():
+		var cat: Dictionary = Categories.DATA[i]
+		var btn := _menu._list.get_child(i) as ProgressButton
+		var s: Dictionary = Stats.category_summary(cat["id"])
+		var tried: float = float(s["seen"]) / s["facts"]
+		_check(btn.right > 0.0 and is_equal_approx(btn.right + btn.wrong, tried), "%s: its bar is the share of facts tried" % cat["name"])
+		_check(is_equal_approx(btn.right, tried * s["right"] / (s["right"] + s["wrong"])), "%s: ...green for the share right" % cat["name"])
+
 ## The round just dealt has its share of untried and previously missed facts.
 func _check_deck_steering(n: int, history: Dictionary) -> void:
 	var dealt := {}
@@ -111,6 +124,8 @@ func _check_menu() -> void:
 	_check(_menu.category_id.is_empty(), "menu opens on the category page")
 	_check(_menu._list.get_child_count() == Categories.DATA.size(), "one button per category")
 	_check(not _menu._back.visible, "no Back button on the top page")
+	var bare := _menu._list.get_child(0) as ProgressButton
+	_check(bare.right == 0.0 and bare.wrong == 0.0, "a fresh player's categories have no bar")
 	for i in Categories.DATA.size():
 		var cat: Dictionary = Categories.DATA[i]
 		(_menu._list.get_child(i) as Button).pressed.emit()

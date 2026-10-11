@@ -65,7 +65,9 @@ its own `right`, `wrong` and `seen` (fact keys) in a `level:<category>:<n>` sect
 button shows only the answers given in that level, and says "New!" until the student plays it.
 The button fills like a bar: as far across as the share of the level's facts tried, split into
 green (`PROGRESS_RIGHT`) and red (`PROGRESS_WRONG`) by how those answers went; both colours are in
-`data/config.gd`. History saved before profiles
+`data/config.gd`. Each category button has the same bar for the whole category: facts tried
+out of every fact in its levels (a fact in two levels counts once), split by all its levels'
+answers. History saved before profiles
 existed (`stats_default.cfg`) goes to the first profile created.
 
 ### Profile pictures

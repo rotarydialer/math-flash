@@ -74,6 +74,25 @@ func level_summary(level_cfg: Dictionary) -> Dictionary:
 		"facts": facts.size(),
 	}
 
+## The same totals over a whole category: answers summed over its levels, and facts tried out of
+## every fact in any of its levels (a fact in two levels counts once).
+func category_summary(category_id: StringName) -> Dictionary:
+	var out := {"right": 0, "wrong": 0, "seen": 0, "facts": 0}
+	var tried := {}       # fact key -> tried in some level of the category
+	for n in range(1, Categories.level_count(category_id) + 1):
+		var cfg := Categories.level(category_id, n)
+		var section := level_section(cfg)
+		out["right"] += int(_cfg.get_value(section, "right", 0))
+		out["wrong"] += int(_cfg.get_value(section, "wrong", 0))
+		var seen := {}
+		for key in PackedStringArray(_cfg.get_value(section, "seen", PackedStringArray())):
+			seen[key] = true
+		for p in Problems.all_facts(cfg):
+			tried[p["key"]] = tried.get(p["key"], false) or seen.has(p["key"])
+	out["facts"] = tried.size()
+	out["seen"] = tried.values().count(true)
+	return out
+
 ## What Problems.deal needs to steer a deck for this level: `tried`, the fact keys answered in
 ## this level; `missed`, the level's facts whose latest answer (in any level) was wrong; and
 ## `shaky`, ones got wrong before but right since.

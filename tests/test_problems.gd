@@ -168,6 +168,28 @@ func _test_deal_small_level() -> void:
 	var deck := Problems.deal(cfg, 20, 1)
 	_check(deck.size() == 4, "a level smaller than the deck deals each fact once")
 
+## A category totals its levels, counting a fact shared by two levels once.
+func _test_category_summary() -> void:
+	var stats := StatsScript.new()
+	stats.profile_id = "unit_test_category"
+	stats.clear()
+	var union := {}
+	for n in range(1, Categories.level_count(&"addition") + 1):
+		for p in Problems.all_facts(Categories.level(&"addition", n)):
+			union[p["key"]] = true
+	_check(stats.category_summary(&"addition") == {"right": 0, "wrong": 0, "seen": 0, "facts": union.size()},
+		"an untouched category has nothing tried, out of every fact in its levels")
+	var shared := Problems.make(2, "+", 3)      # in Addition 1, 2 and 3
+	stats.record(shared, true, Categories.level(&"addition", 1))
+	stats.record(shared, false, Categories.level(&"addition", 2))
+	stats.record(Problems.make(23, "+", 4), true, Categories.level(&"addition", 4))
+	var s: Dictionary = stats.category_summary(&"addition")
+	_check(s["right"] == 2 and s["wrong"] == 1, "a category sums its levels' answers")
+	_check(s["seen"] == 2, "a fact tried in two levels counts once")
+	_check(stats.category_summary(&"subtraction")["seen"] == 0, "other categories are untouched")
+	stats.clear()
+	stats.free()
+
 ## Untried and missed facts get places in the deck, however the shuffle falls.
 func _test_deal_steering() -> void:
 	var cfg := Categories.level(&"multiplication", 3)
@@ -271,6 +293,7 @@ func _test_stats() -> void:
 	_check(history["missed"].is_empty() and history["shaky"] == ["3+4"], "...and shaky once it's been got right since")
 	stats.record(Problems.make(5, "+", 1), true, add2)   # dealt at level 2 before it lost its easy facts
 	_check(stats.level_summary(add2)["seen"] == 1, "facts a level no longer deals don't count as tried")
+	_test_category_summary()
 	var other := StatsScript.new()
 	other.profile_id = "unit_test_other"
 	_check(other.fact("3+4")["right"] == 0, "profiles keep separate histories")
