@@ -5,6 +5,7 @@
 # Build output (exported APKs etc.) — large & regenerable
 /build/
 *.tmp
+profiles/images/*
 
 # Editor / OS
 .DS_Store

@@ -19,6 +19,7 @@ config/quit_on_go_back=false
 [autoload]
 
 Stats="*res://scripts/stats.gd"
+Profiles="*res://scripts/profiles.gd"
 GameState="*res://scripts/game_state.gd"
 
 [display]
@@ -36,3 +37,9 @@ pointing/emulate_touch_from_mouse=true
 
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
+
+[importer_defaults]
+
+texture={
+"process/size_limit": 512
+}
