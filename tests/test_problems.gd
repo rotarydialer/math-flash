@@ -29,6 +29,8 @@ func _initialize() -> void:
 	_test_deal_small_level()
 	_test_deal_steering()
 	_test_round()
+	_test_points()
+	_test_timed_round()
 	_test_stats()
 	_test_profiles()
 	print("Checks: %d  Failures: %d" % [_checks, _failures])
@@ -252,6 +254,41 @@ func _test_round() -> void:
 	r.record(true)
 	_check(r.results.size() == 5, "answers after the end are ignored")
 
+## Timed points: a ✓ is base plus a speed bonus that shrinks from FAST_TIME to TIME_LIMIT, times the streak.
+func _test_points() -> void:
+	var full := Config.BASE_POINTS + Config.SPEED_POINTS
+	_check(FlashRound.points_for(false, 0.5, 0) == 0, "a ✗ earns nothing")
+	_check(FlashRound.points_for(true, 0.0, 1) == full, "an instant ✓ earns the whole bonus")
+	_check(FlashRound.points_for(true, Config.FAST_TIME, 1) == full, "...and so does one right at FAST_TIME")
+	var mid := (Config.FAST_TIME + Config.TIME_LIMIT) / 2.0
+	_check(FlashRound.points_for(true, mid, 1) == Config.BASE_POINTS + Config.SPEED_POINTS / 2, "halfway to TIME_LIMIT earns half the bonus")
+	_check(FlashRound.points_for(true, Config.TIME_LIMIT, 1) == Config.BASE_POINTS, "at TIME_LIMIT only the base is left")
+	_check(FlashRound.points_for(true, Config.TIME_LIMIT * 3, 1) == Config.BASE_POINTS, "...and it never goes below the base")
+	_check(FlashRound.points_for(true, 0.0, 2) == roundi(full * (1.0 + Config.STREAK_STEP)), "a second ✓ in a row earns the streak step")
+	_check(FlashRound.points_for(true, 0.0, 1000) == roundi(full * Config.STREAK_MAX), "the streak multiplier is capped")
+	_check(FlashRound.points_for(true, -1.0, 1) == full, "an unknown time doesn't go negative")
+
+## A timed round scores each answer and keeps the streak; an untimed one keeps no points.
+func _test_timed_round() -> void:
+	var r := FlashRound.new(Problems.deal(Categories.level(&"addition", 1), 5, 3), true)
+	r.record(true, 0.0)
+	r.record(true, 0.0)
+	_check(r.streak == 2 and r.last_points() == FlashRound.points_for(true, 0.0, 2), "a ✓ in a row builds the streak")
+	r.record(false, 0.0)
+	_check(r.streak == 0 and r.last_points() == 0, "a ✗ scores nothing and resets the streak")
+	r.record(true, Config.TIME_LIMIT)
+	_check(r.last_points() == Config.BASE_POINTS, "a slow ✓ after a ✗ earns just the base")
+	r.record(true, 0.0)
+	var expected := 0
+	for p in r.points:
+		expected += p
+	_check(r.points.size() == 5 and r.total_points() == expected, "total_points adds up every answer")
+	_check(r.score() == 4, "a timed round still counts right answers")
+	var plain := FlashRound.new(Problems.deal(Categories.level(&"addition", 1), 3, 3))
+	plain.record(true)
+	plain.record(true, 1.0)
+	_check(not plain.timed and plain.points.is_empty() and plain.total_points() == 0, "an untimed round keeps no points")
+
 ## Stats files each answer per fact and survives a reload from disk.
 func _test_stats() -> void:
 	var stats := StatsScript.new()
@@ -293,6 +330,16 @@ func _test_stats() -> void:
 	_check(history["missed"].is_empty() and history["shaky"] == ["3+4"], "...and shaky once it's been got right since")
 	stats.record(Problems.make(5, "+", 1), true, add2)   # dealt at level 2 before it lost its easy facts
 	_check(stats.level_summary(add2)["seen"] == 1, "facts a level no longer deals don't count as tried")
+	_check(stats.level_summary(add2)["best"] == 0, "a level with no timed round has no best")
+	_check(stats.record_best(add2, 1200), "a first timed score is a new best")
+	_check(not stats.record_best(add2, 900) and not stats.record_best(add2, 1200), "a lower or equal score isn't")
+	_check(stats.record_best(add2, 1500), "a higher one is")
+	var reloaded_best := StatsScript.new()
+	reloaded_best.profile_id = "unit_test"
+	_check(reloaded_best.level_summary(add2)["best"] == 1500, "the best survives a reload")
+	_check(reloaded_best.level_summary(add2)["right"] == stats.level_summary(add2)["right"], "...alongside the tallies")
+	_check(stats.level_summary(Categories.level(&"addition", 1))["best"] == 0, "each level has its own best")
+	reloaded_best.free()
 	_test_category_summary()
 	var other := StatsScript.new()
 	other.profile_id = "unit_test_other"
@@ -343,6 +390,11 @@ func _test_profiles() -> void:
 	_check(profiles.rename(ada, " Ava ") and profiles.find(ada)["name"] == "Ava", "renaming trims the name")
 	reloaded.load_file(path)
 	_check(reloaded.find(ada)["name"] == "Ava", "a rename survives a reload")
+	_check(not profiles.is_timed(ada), "a new profile isn't timed")
+	profiles.set_timed(ada, true)
+	reloaded.load_file(path)
+	_check(reloaded.is_timed(ada) and not reloaded.is_timed(bo), "turning timed on survives a reload, for that profile only")
+	_check(not profiles.is_timed("nobody"), "nobody isn't timed")
 	var ada_stats := StatsScript.new()
 	ada_stats.profile_id = ada
 	ada_stats.record(Problems.make(1, "+", 1), true, Categories.level(&"addition", 1))
@@ -359,6 +411,7 @@ func _test_profiles() -> void:
 	old.save(path)
 	reloaded.load_file(path)
 	_check(reloaded.find("p1").get("picture") == "", "a profile saved before pictures existed loads with none")
+	_check(reloaded.find("p1").get("timed") == false and not reloaded.is_timed("p1"), "...and with timed off")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	profiles.free()
 	reloaded.free()
