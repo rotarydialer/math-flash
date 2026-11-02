@@ -4,8 +4,9 @@ extends Node
 ## needs more practice on. Saved to user://stats_<profile>.cfg with one section per fact key
 ## ("3+4"): right, wrong, recent (the last RECENT_HISTORY answers, oldest first) and last_seen
 ## (unix time). Levels share facts (Addition 1's are all in Addition 2 too), so each level also
-## keeps its own tallies, in a "level:<category>:<n>" section: right, wrong and seen (the fact
-## keys answered there). A level's progress is only what was answered in that level.
+## keeps its own tallies, in a "level:<category>:<n>" section: right, wrong, seen (the fact
+## keys answered there) and best_points (the best finished timed round there, if any). A level's
+## progress is only what was answered in that level.
 ## GameState keeps profile_id in step with the Profiles autoload.
 
 const Config := preload("res://data/config.gd")
@@ -60,7 +61,8 @@ func fact(key: String) -> Dictionary:
 	}
 
 ## How the student has done in a level, counting only answers given there:
-## {right, wrong, seen (facts answered at least once), facts (in the level)}.
+## {right, wrong, seen (facts answered at least once), facts (in the level), best (timed points, 0
+## if no timed round has been finished there)}.
 func level_summary(level_cfg: Dictionary) -> Dictionary:
 	var section := level_section(level_cfg)
 	var seen := PackedStringArray(_cfg.get_value(section, "seen", PackedStringArray()))
@@ -72,7 +74,17 @@ func level_summary(level_cfg: Dictionary) -> Dictionary:
 		"wrong": int(_cfg.get_value(section, "wrong", 0)),
 		"seen": tried,
 		"facts": facts.size(),
+		"best": int(_cfg.get_value(section, "best_points", 0)),
 	}
+
+## Files a finished timed round's points under its level; true if they beat the level's best.
+func record_best(level_cfg: Dictionary, points: int) -> bool:
+	var section := level_section(level_cfg)
+	if points <= int(_cfg.get_value(section, "best_points", 0)):
+		return false
+	_cfg.set_value(section, "best_points", points)
+	_cfg.save(save_path())
+	return true
 
 ## The same totals over a whole category: answers summed over its levels, and facts tried out of
 ## every fact in any of its levels (a fact in two levels counts once).

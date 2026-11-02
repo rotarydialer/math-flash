@@ -2,7 +2,8 @@ extends Node
 
 ## Autoload. The students who use this device and which one is playing. Each profile has an id,
 ## which names its stats file and never changes, a display name, and optionally a picture (a file
-## name from picture_dir). Saved to user://profiles.cfg. Selecting a profile emits `selected`;
+## name from picture_dir), and whether they play timed rounds (`timed`, off unless they turn it on).
+## Saved to user://profiles.cfg. Selecting a profile emits `selected`;
 ## GameState points Stats at it.
 
 signal selected(id: String)
@@ -21,7 +22,7 @@ var save_path := "user://profiles.cfg"
 var picture_dir := "res://profiles/images/"
 ## Who's playing; "" until someone has picked a profile.
 var current_id := ""
-## [{id, name, picture}] in the order they were made; picture is "" for none.
+## [{id, name, picture, timed}] in the order they were made; picture is "" for none.
 var _list: Array = []
 
 func _ready() -> void:
@@ -32,10 +33,12 @@ func load_file(path: String) -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(path)
 	_list = Array(cfg.get_value("profiles", "list", []))
-	# profiles saved before pictures existed have no picture field
+	# profiles saved before pictures (or timed mode) existed don't have those fields
 	for p in _list:
 		if not p.has("picture"):
 			p["picture"] = ""
+		if not p.has("timed"):
+			p["timed"] = false
 	current_id = str(cfg.get_value("profiles", "current", ""))
 	if find(current_id).is_empty():
 		current_id = ""
@@ -73,7 +76,7 @@ func create(player_name: String) -> String:
 	var id := _new_id()
 	if _list.is_empty() and not legacy_id.is_empty() and FileAccess.file_exists(StatsScript.path_for(legacy_id)):
 		id = legacy_id
-	_list.append({"id": id, "name": player_name.strip_edges(), "picture": ""})
+	_list.append({"id": id, "name": player_name.strip_edges(), "picture": "", "timed": false})
 	_save()
 	return id
 
@@ -129,6 +132,17 @@ func set_picture(id: String, file: String) -> void:
 	if p.is_empty():
 		return
 	p["picture"] = file
+	_save()
+
+## Whether this profile plays timed rounds (false for nobody).
+func is_timed(id: String) -> bool:
+	return bool(find(id).get("timed", false))
+
+func set_timed(id: String, on: bool) -> void:
+	var p := find(id)
+	if p.is_empty():
+		return
+	p["timed"] = on
 	_save()
 
 func _new_id() -> String:

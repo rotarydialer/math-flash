@@ -2,7 +2,8 @@ extends Node
 
 ## Autoload singleton. Owns which screen is up and the round in progress; broadcasts via signals
 ## so the screens stay decoupled. Answers are handed to the Stats autoload as they come in, filed
-## under whichever profile the Profiles autoload says is playing.
+## under whichever profile the Profiles autoload says is playing. A timed round's points come with
+## it in `current_round`, and `new_best` says whether the last one finished set the level's best.
 
 signal profiles_opened()
 signal menu_opened()
@@ -21,6 +22,13 @@ var current_round: FlashRound
 ## category from `--category=id` (Addition if omitted).
 var start_level := 0
 var start_category: StringName = &"addition"
+## Whether rounds are timed: the playing profile's choice, or always with `-- --timed`.
+var timed: bool:
+	get:
+		return _force_timed or Profiles.is_timed(Profiles.current_id)
+## Whether the timed round just finished beat the level's best.
+var new_best := false
+var _force_timed := false
 
 func _ready() -> void:
 	_parse_cmdline()
@@ -29,13 +37,15 @@ func _ready() -> void:
 		Stats.profile_id = Profiles.current_id
 
 ## `godot --path . -- --level=3` launches straight into Addition level 3;
-## add `--category=subtraction` for another category (playtesting).
+## add `--category=subtraction` for another category, `--timed` for timed rounds (playtesting).
 func _parse_cmdline() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--level="):
 			start_level = maxi(0, int(arg.get_slice("=", 1)))
 		elif arg.begins_with("--category="):
 			start_category = StringName(arg.get_slice("=", 1))
+		elif arg == "--timed":
+			_force_timed = true
 
 ## Main calls this once at boot. Nobody's picked a profile yet → ask who's playing.
 func boot() -> void:
@@ -73,7 +83,8 @@ func to_menu() -> void:
 func start_round(category_id: StringName, level_number: int) -> void:
 	level_cfg = Categories.level(category_id, level_number)
 	var history := Stats.practice_history(level_cfg)
-	current_round = FlashRound.new(Problems.deal(level_cfg, Config.DECK_SIZE, randi(), history))
+	current_round = FlashRound.new(Problems.deal(level_cfg, Config.DECK_SIZE, randi(), history), timed)
+	new_best = false
 	state = State.PLAYING
 	round_started.emit(level_cfg, current_round.size())
 	_show_card()
@@ -81,14 +92,16 @@ func start_round(category_id: StringName, level_number: int) -> void:
 func play_again() -> void:
 	start_round(level_cfg["category"], level_cfg["number"])
 
-## The player marked the current card right or wrong.
-func answer(correct: bool) -> void:
+## The player marked the current card right or wrong, `seconds` after it was dealt (timed rounds).
+func answer(correct: bool, seconds := -1.0) -> void:
 	if state != State.PLAYING:
 		return
 	Stats.record(current_round.current(), correct, level_cfg)
-	current_round.record(correct)
+	current_round.record(correct, seconds)
 	if current_round.is_done():
 		state = State.SUMMARY
+		if current_round.timed:
+			new_best = Stats.record_best(level_cfg, current_round.total_points())
 		round_finished.emit(current_round.score(), current_round.size())
 	else:
 		_show_card()

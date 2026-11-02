@@ -7,13 +7,15 @@ extends Control
 ## on it so far. The button fills like a bar: as far across as the share of facts tried, green for
 ## the % right and red for the % wrong. Rebuilt on every change so the numbers stay current. Coming back from a round
 ## lands on that round's category. The top page's corner button shows who's playing (picture and
-## name) and opens the profile picker.
+## name) and opens the profile picker; the level page's has the Timed toggle instead, remembered per
+## player. While it's on, each level button also shows that level's best timed score.
 
 const Config := preload("res://data/config.gd")
 
 var _title: Label
 var _back: Button
 var _profile: ProfileButton
+var _timed: Button
 var _list: VBoxContainer
 ## The category whose levels are showing; empty on the top page.
 var category_id: StringName = &""
@@ -55,6 +57,16 @@ func _ready() -> void:
 	_profile.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 24)
 	_profile.offset_top = 36
 	_profile.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_timed = Button.new()
+	_timed.toggle_mode = true
+	_timed.focus_mode = Control.FOCUS_NONE
+	_timed.custom_minimum_size = Vector2(240, 84)
+	_timed.visible = false
+	_timed.toggled.connect(_on_timed_toggled)
+	add_child(_timed)
+	_timed.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 24)
+	_timed.offset_top = 36
+	_timed.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	GameState.menu_opened.connect(_on_menu_opened)
 
 func _on_menu_opened() -> void:
@@ -68,6 +80,7 @@ func show_categories() -> void:
 	category_id = &""
 	_title.text = "Math Flash Cards"
 	_back.visible = false
+	_timed.visible = false
 	_profile.show_player(Profiles.current_name(), Profiles.picture_of(Profiles.current_id))
 	_profile.visible = not _profile.text.is_empty()
 	_clear_list()
@@ -86,9 +99,16 @@ func show_levels(id: StringName) -> void:
 	_title.text = Categories.category(id)["name"]
 	_back.visible = true
 	_profile.visible = false
+	_timed.visible = not Profiles.current_id.is_empty()
+	_timed.set_pressed_no_signal(GameState.timed)
+	_timed.text = "Timed: On" if GameState.timed else "Timed: Off"
 	_clear_list()
 	for n in range(1, Categories.level_count(id) + 1):
 		_list.add_child(_level_button(Categories.level(id, n)))
+
+func _on_timed_toggled(on: bool) -> void:
+	Profiles.set_timed(Profiles.current_id, on)
+	show_levels(category_id)
 
 func _clear_list() -> void:
 	for child in _list.get_children():
@@ -119,4 +139,7 @@ func _progress_text(s: Dictionary) -> String:
 	var answered: int = s["right"] + s["wrong"]
 	if answered == 0:
 		return "New!"
-	return "%d%% right  ·  %d of %d facts tried" % [roundi(100.0 * s["right"] / answered), s["seen"], s["facts"]]
+	var text := "%d%% right  ·  %d of %d facts tried" % [roundi(100.0 * s["right"] / answered), s["seen"], s["facts"]]
+	if GameState.timed and s["best"] > 0:
+		text += "\nBest: %s points" % PlayScreen.grouped(s["best"])
+	return text

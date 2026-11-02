@@ -4,6 +4,8 @@ extends Control
 ## One flash card, drawn in code. Front: the problem. Tap it and it flips to show the answer.
 ## Tapping the answer side does nothing — the ✓ / ✗ buttons move things on from there.
 
+## The tap that turns it over (timed rounds stop the clock here; `flipped` waits for the animation).
+signal flip_started()
 signal flipped()
 
 const Config := preload("res://data/config.gd")
@@ -37,6 +39,7 @@ func flip() -> void:
 	if showing_answer or flipping or problem.is_empty():
 		return
 	flipping = true
+	flip_started.emit()
 	_kill_tween()
 	scale = Vector2.ONE
 	modulate.a = 1.0
