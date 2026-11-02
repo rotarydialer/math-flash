@@ -5,7 +5,7 @@ extends Node2D
 ## ✓ or ✗ at random — checking the counter, button states, the summary score and that Stats
 ## recorded every answer. It also walks the two-page menu (categories → levels → round → back) and
 ## the profile picker (first launch → add a player → pick a picture → switch players → rename →
-## delete).
+## delete), and a timed round turned on from the level page's toggle.
 ## Uses throwaway profiles so real progress isn't touched. Run with:
 ##   godot --headless --path . res://tests/Playtest.tscn
 ## Prints PLAYTEST PASSED / FAILED; exit code = number of failing checks.
@@ -46,6 +46,7 @@ func _run() -> void:
 			await _play_level(cat["id"], n)
 	_check_category_bars()
 	Stats.clear()
+	await _check_timed()
 	print("Checks: %d  Failures: %d" % [_checks, _failures])
 	print("PLAYTEST PASSED" if _failures == 0 else "PLAYTEST FAILED")
 	get_tree().quit(_failures)
@@ -58,6 +59,7 @@ func _play_level(category_id: StringName, n: int) -> void:
 	_check_deck_steering(n, history)
 	var before: Dictionary = Stats.level_summary(cfg)
 	var expected_score := 0
+	_check(not _play._timer.visible and not _play._points.visible, "L%d: an untimed round has no clock or points" % n)
 	for i in total:
 		_check(GameState.state == GameState.State.PLAYING, "L%d card %d: still playing" % [n, i])
 		_check(_play._counter.text == "%d / %d" % [i + 1, total], "L%d card %d: counter reads right" % [n, i])
@@ -75,6 +77,7 @@ func _play_level(category_id: StringName, n: int) -> void:
 	_check(GameState.state == GameState.State.SUMMARY, "L%d: round ends in the summary" % n)
 	_check(_play._overlay.visible, "L%d: summary overlay is up" % n)
 	_check(_play._overlay_score.text == "%d / %d" % [expected_score, total], "L%d: summary shows the score" % n)
+	_check(not _play._overlay_points.visible and not _play._overlay_best.visible, "L%d: ...and no points" % n)
 	_check(GameState.current_round.score() == expected_score, "L%d: round score matches the bot's answers" % n)
 	var after: Dictionary = Stats.level_summary(cfg)
 	_check(after["right"] - before["right"] == expected_score, "L%d: Stats counted every ✓" % n)
@@ -90,6 +93,60 @@ func _play_level(category_id: StringName, n: int) -> void:
 	if n < Categories.level_count(category_id):
 		var next := _menu._list.get_child(n) as ProgressButton
 		_check(next.right == 0.0 and next.wrong == 0.0, "L%d: the next level, not played yet, has no bar" % n)
+
+## A player turns Timed on from the level page, plays a round against the clock, and gets its points
+## and best; turning it off again brings back the plain round.
+func _check_timed() -> void:
+	var path := "user://profiles_playtest_timed.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	Profiles.load_file(path)
+	var id := Profiles.create("Tim")
+	Profiles.select(id)
+	Stats.clear()
+	_menu.show_levels(&"addition")
+	_check(_menu._timed.visible and not _menu._timed.button_pressed, "the level page has the Timed toggle, off")
+	_check(_menu._timed.text == "Timed: Off" and not GameState.timed, "...reading Off")
+	_menu._timed.button_pressed = true
+	_check(Profiles.is_timed(id) and GameState.timed and _menu._timed.text == "Timed: On", "the toggle turns timed on for the player")
+	(_menu._list.get_child(0) as Button).pressed.emit()
+	var r := GameState.current_round
+	_check(r.timed and _play._timer.visible and _play._points.visible, "a timed round shows the clock and points")
+	_check(_play._points.text == "0 points", "points start at 0")
+	var expected := 0
+	var streak := 0
+	for i in r.size():
+		_check(_play._timer.running, "timed card %d: the clock runs until the flip" % i)
+		_play._card.flip()
+		_check(not _play._timer.running and _play._think_time >= 0.0, "timed card %d: the tap stops the clock" % i)
+		await _settle()
+		var correct := randf() < 0.7
+		streak = streak + 1 if correct else 0
+		expected += FlashRound.points_for(correct, _play._think_time, streak)
+		(_play._right_btn if correct else _play._wrong_btn).pressed.emit()
+		_check(r.total_points() == expected, "timed card %d: points add up" % i)
+		_check(_play._points.text == "%s points" % PlayScreen.grouped(expected), "timed card %d: the total shows" % i)
+	_check(GameState.state == GameState.State.SUMMARY, "the timed round ends in the summary")
+	_check(_play._overlay_points.visible and _play._overlay_points.text == "%s points" % PlayScreen.grouped(expected),
+		"the summary shows the points")
+	_check(GameState.new_best == (expected > 0) and _play._overlay_best.visible == GameState.new_best,
+		"a first timed round with points is a new best")
+	print("timed addition level 1: %d points" % expected)
+	GameState.to_menu()
+	var level_text := (_menu._list.get_child(0) as Button).text
+	_check((expected > 0) == level_text.contains("Best: %s points" % PlayScreen.grouped(expected)),
+		"the level button shows the best while Timed is on")
+	_menu._timed.button_pressed = false
+	_check(not Profiles.is_timed(id) and not GameState.timed, "the toggle turns timed off again")
+	_check(not (_menu._list.get_child(0) as Button).text.contains("Best"), "...and the level button drops the best")
+	(_menu._list.get_child(0) as Button).pressed.emit()
+	_check(not GameState.current_round.timed and not _play._timer.visible and not _play._points.visible,
+		"with Timed off the round is plain again")
+	GameState.to_menu()
+	_menu.show_categories()
+	_check(not _menu._timed.visible, "the top page has no Timed toggle")
+	Stats.clear()
+	Profiles.delete(id)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 ## Every level has been played: each category's bar covers what's been tried across its levels.
 func _check_category_bars() -> void:

@@ -12,6 +12,17 @@ const RECENT_HISTORY := 10        # most recent right/wrong answers kept per fac
 const UNTRIED_SHARE := 0.25       # at least this share of a deck is facts not yet tried in the level (while any are left)
 const MIN_MISSED := 3             # ...and at least this many facts the student has got wrong before (if there are any)
 
+# --- Timed mode --------------------------------------------------------------
+# Opt-in per profile. The clock runs from a card being dealt to the tap that flips it. A ✓ earns
+# BASE_POINTS plus a speed bonus (all of SPEED_POINTS within FAST_TIME, shrinking to none at
+# TIME_LIMIT), times a streak multiplier; a ✗ earns nothing and resets the streak.
+const TIME_LIMIT := 8.0           # seconds until the speed bonus is gone (the bar is empty)
+const FAST_TIME := 2.0            # flip within this many seconds for the whole speed bonus
+const BASE_POINTS := 100          # any ✓
+const SPEED_POINTS := 100         # the most a ✓ can add for speed
+const STREAK_STEP := 0.1          # each ✓ in a row after the first adds this to the multiplier...
+const STREAK_MAX := 2.0           # ...up to this
+
 # --- Layout ------------------------------------------------------------------
 const VIEWPORT_W := 720.0
 const VIEWPORT_H := 1280.0
@@ -28,6 +39,7 @@ const FONT_BUTTON := 34
 const FONT_CARD := 120            # the problem on the card
 const FONT_CARD_ANSWER := 150     # the answer on the flipped card
 const FONT_ANSWER_ICON := 96      # ✗ / ✓
+const FONT_POINTS := 44           # the running points total and the "+N" pop in a timed round
 
 # --- Colors ------------------------------------------------------------------
 const BACKGROUND := Color("dfeaf5")
@@ -43,6 +55,9 @@ const RIGHT := Color("3fae5a")
 const PROGRESS_RIGHT := Color("bfe6c4")
 const PROGRESS_WRONG := Color("f5c6bd")
 const WRONG := Color("e0503a")
+const TIMER_FULL := Color("3fae5a")     # the timed-mode bar while there's plenty of time...
+const TIMER_EMPTY := Color("e0503a")    # ...fading to this as it runs out
+const TIMER_TRACK := Color("c7d6e8")    # the bar's empty track
 const AVATAR_RIM := Color("9fb4d6")     # ring around a profile picture
 const AVATAR_BLANK := Color("fff2c4")   # the disc behind a player's initial when they have no picture
 
@@ -50,3 +65,4 @@ const AVATAR_BLANK := Color("fff2c4")   # the disc behind a player's initial whe
 const FLIP_TIME := 0.28           # seconds for the whole flip (half to edge-on, half back)
 const DEAL_TIME := 0.22           # seconds for the next card to slide in
 const BUTTON_DISABLED_ALPHA := 0.25
+const POINTS_POP_TIME := 0.7      # seconds the "+N" after a ✓ takes to float up and fade

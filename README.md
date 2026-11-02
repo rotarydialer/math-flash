@@ -46,6 +46,25 @@ what counts as too easy after level 1. To add a new category, add an entry
 there and its operator in `Problems.answer` / `Problems.SYMBOLS`. The menu picks it up
 automatically.
 
+## Timed mode
+
+Optional, per player: the **Timed** toggle in the top corner of a category's level page turns it on
+or off for whoever's playing, and it's remembered (off to start with). A timed round looks the same
+plus a points total and a bar above the card that drains over `TIME_LIMIT` seconds. The clock runs
+from the card appearing to the tap that flips it; marking ✓ / ✗ isn't timed.
+
+- A ✗ earns 0 and resets the streak.
+- A ✓ earns `BASE_POINTS` (100) plus a speed bonus: all of `SPEED_POINTS` (100) when flipped within
+  `FAST_TIME` (2 s), shrinking evenly to nothing at `TIME_LIMIT` (8 s). An empty bar just means no
+  bonus; the card waits as usual.
+- That's multiplied by the streak: ×1 for the first ✓ in a row, `STREAK_STEP` (0.1) more for each
+  one after, up to `STREAK_MAX` (×2). So a card is worth 100 to 400 points.
+
+Each ✓ pops its points over the card. The summary shows the round's points and "New best!" when
+they beat the level's best, which is kept per player in the level's stats section (`best_points`)
+and shown on the level button while Timed is on. All the numbers are in `data/config.gd`. Timed
+answers count as right or wrong for practice exactly like untimed ones.
+
 ## Stats & profiles
 
 Each student has a profile. The first launch asks "Who's playing?"; after that the app opens as
@@ -55,13 +74,14 @@ player's Edit button renames them, changes their picture, or deletes them. Delet
 takes their stats with them; renaming keeps them, since the stats file is named by id.
 
 `scripts/profiles.gd` keeps the list in `user://profiles.cfg`: each profile's `id`, `name` and
-`picture` (a file name in `profiles/images/`, or `""`), plus which one is `current`. The id is fixed when the profile is made and names its stats file,
+`picture` (a file name in `profiles/images/`, or `""`) and `timed` (whether they play timed rounds), plus which one is `current`. The id is fixed when the profile is made and names its stats file,
 so a name can be anything (up to 12 characters, no duplicates).
 
 `scripts/stats.gd` saves each answer to `user://stats_<id>.cfg`, with one section per fact
 key (`"3+4"`) holding `right`, `wrong`, `recent` (the last 10 answers) and `last_seen`.
 Levels share facts (every Addition 1 fact is also in Addition 2 and 3), so each level also keeps
-its own `right`, `wrong` and `seen` (fact keys) in a `level:<category>:<n>` section. Each menu
+its own `right`, `wrong` and `seen` (fact keys) in a `level:<category>:<n>` section, plus
+`best_points`, the best finished timed round there. Each menu
 button shows only the answers given in that level, and says "New!" until the student plays it.
 The button fills like a bar: as far across as the share of the level's facts tried, split into
 green (`PROGRESS_RIGHT`) and red (`PROGRESS_WRONG`) by how those answers went; both colours are in
@@ -95,7 +115,7 @@ A profile whose picture file has been removed just shows the initial again.
 | `data/config.gd` | **Single source of truth** for tuning: deck size, layout, colors, type sizes, animation timing |
 | `data/categories.gd` | Categories and their levels |
 | `scripts/problems.gd` | Pure problem generation: every fact in a level, plus the seeded deal. No nodes, so it can be tested headless |
-| `scripts/round.gd` | Pure model of one round: the deck, the current card, and the results |
+| `scripts/round.gd` | Pure model of one round: the deck, the current card, the results, and timed points (`points_for`) |
 | `scripts/game_state.gd` | Autoload: which screen is up, the current round, switching profiles, and the signals |
 | `scripts/profiles.gd` | Autoload: the students' profiles and who's playing |
 | `scripts/stats.gd` | Autoload: per-profile, per-fact answer history |
@@ -103,6 +123,7 @@ A profile whose picture file has been removed just shows the initial again.
 | `scripts/menu_screen.gd` | Two-page picker: categories, then that category's levels |
 | `scripts/play_screen.gd` | Card, ✗ / ✓ buttons, and the end-of-round summary |
 | `scripts/card.gd`, `scripts/answer_button.gd` | Placeholder art drawn in code |
+| `scripts/timer_bar.gd` | Timed mode's draining bar above the card |
 | `scripts/progress_button.gd` | A button with a right/wrong bar behind its text (the level list's progress) |
 | `scripts/avatar.gd`, `scripts/profile_button.gd` | A profile picture cropped to a circle (or the initial), and a button with one beside a name |
 | `profiles/images/` | Profile pictures to choose from (gitignored) |
@@ -121,6 +142,7 @@ godot --headless --path . --import
 godot --path .                  # play
 godot --path . -- --level=3     # jump straight into Addition level 3
 godot --path . -- --category=subtraction --level=2   # ...or another category's level
+godot --path . -- --timed --level=2                  # ...as a timed round
 godot --headless --path . --script res://tests/test_problems.gd   # logic tests
 godot --headless --path . res://tests/Playtest.tscn               # bot plays a round of every level of every category
 ```

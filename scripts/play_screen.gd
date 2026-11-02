@@ -3,19 +3,29 @@ extends Control
 
 ## The round itself: a top bar, the flash card, and the ✗ / ✓ buttons, which wake up only once the
 ## card is flipped. The end-of-round summary is an overlay on top. Driven by GameState signals.
+## A timed round adds a points total and a draining TimerBar between the title and the card, a
+## "+N" pop after each ✓, and the points (and any new best) on the summary.
 
 const Config := preload("res://data/config.gd")
 
 var _title: Label
 var _counter: Label
+var _points: Label
+var _timer: TimerBar
+var _pop: Label
+var _pop_tween: Tween
 var _card: FlashCard
 var _wrong_btn: AnswerButton
 var _right_btn: AnswerButton
 var _overlay: Control
 var _overlay_title: Label
 var _overlay_score: Label
+var _overlay_points: Label
+var _overlay_best: Label
 var _overlay_missed: Label
 var _missed: Array[String] = []
+## Seconds from the card being dealt to the tap that flipped it (timed rounds).
+var _think_time := -1.0
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -23,7 +33,9 @@ func _ready() -> void:
 	_build_top_bar()
 	_card = FlashCard.new()
 	add_child(_card)
+	_card.flip_started.connect(_on_flip_started)
 	_card.flipped.connect(_on_flipped)
+	_build_timed_bits()
 	_wrong_btn = _make_answer_button(false, Config.VIEWPORT_W * 0.28)
 	_right_btn = _make_answer_button(true, Config.VIEWPORT_W * 0.72)
 	_build_overlay()
@@ -64,6 +76,24 @@ func _make_answer_button(correct: bool, center_x: float) -> AnswerButton:
 	add_child(btn)
 	return btn
 
+## The points total and timer bar (shown only in timed rounds), and the "+N" pop.
+func _build_timed_bits() -> void:
+	_points = _make_label("", Config.FONT_POINTS, Vector2(0, 210))
+	_points.add_theme_color_override("font_color", Config.ANSWER_INK)
+	_timer = TimerBar.new()
+	_timer.size = Vector2(Config.CARD_SIZE.x, 20)
+	_timer.position = Vector2((Config.VIEWPORT_W - _timer.size.x) / 2.0, 296)
+	add_child(_timer)
+	_pop = _make_label("", Config.FONT_POINTS, Vector2.ZERO)
+	_pop.add_theme_color_override("font_color", Config.RIGHT)
+	_pop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pop.visible = false
+	_set_timed_visible(false)
+
+func _set_timed_visible(on: bool) -> void:
+	_points.visible = on
+	_timer.visible = on
+
 func _build_overlay() -> void:
 	_overlay = Control.new()
 	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -83,6 +113,9 @@ func _build_overlay() -> void:
 	_overlay_title = _box_label(box, Config.FONT_TITLE)
 	_overlay_score = _box_label(box, Config.FONT_CARD)
 	_overlay_score.add_theme_color_override("font_color", Config.ANSWER_INK)
+	_overlay_points = _box_label(box, Config.FONT_HEADER + 10)
+	_overlay_best = _box_label(box, Config.FONT_HEADER)
+	_overlay_best.add_theme_color_override("font_color", Config.RIGHT)
 	_overlay_missed = _box_label(box, 30)
 	_overlay_missed.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	for spec in [["Play Again", GameState.play_again], ["Levels", GameState.to_menu]]:
@@ -109,11 +142,21 @@ func _on_round_started(level_cfg: Dictionary, _total: int) -> void:
 	_overlay.visible = false
 	_missed.clear()
 	_title.text = "%s · Level %d" % [level_cfg["category_name"], level_cfg["number"]]
+	_set_timed_visible(GameState.current_round.timed)
+	_points.text = "0 points"
+	_hide_pop()
 
 func _on_card_shown(problem: Dictionary, index: int, total: int) -> void:
 	_counter.text = "%d / %d" % [index + 1, total]
 	_card.show_problem(problem)
 	_set_answer_buttons(false)
+	_think_time = -1.0
+	if _timer.visible:
+		_timer.start()
+
+func _on_flip_started() -> void:
+	_timer.stop()
+	_think_time = _timer.elapsed()
 
 func _on_flipped() -> void:
 	_set_answer_buttons(true)
@@ -125,10 +168,49 @@ func _on_answer(correct: bool) -> void:
 		# non-breaking spaces keep each fact on one line when the list wraps
 		_missed.append(("%s = %d" % [_card.question_text(), _card.problem["answer"]]).replace(" ", "\u00a0"))
 	_set_answer_buttons(false)
-	GameState.answer(correct)
+	var timed := GameState.current_round.timed
+	GameState.answer(correct, _think_time if timed else -1.0)
+	if timed:
+		_points.text = "%s points" % grouped(GameState.current_round.total_points())
+		if correct and not GameState.current_round.is_done():
+			_show_pop(GameState.current_round.last_points(), GameState.current_round.streak)
+
+## Floats "+N" (and the streak multiplier, once there is one) up off the top of the card.
+func _show_pop(points: int, streak: int) -> void:
+	var mult := FlashRound.multiplier_for(streak)
+	_pop.text = "+%d" % points + ("  ×%s" % String.num(mult, 1) if mult > 1.0 else "")
+	var top := Config.CARD_CENTER_Y - Config.CARD_SIZE.y / 2.0
+	_hide_pop()
+	_pop.position = Vector2(0, top + 10)
+	_pop.modulate.a = 1.0
+	_pop.visible = true
+	_pop_tween = create_tween().set_parallel().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_pop_tween.tween_property(_pop, "position:y", top - 50, Config.POINTS_POP_TIME)
+	_pop_tween.tween_property(_pop, "modulate:a", 0.0, Config.POINTS_POP_TIME).set_ease(Tween.EASE_IN)
+	_pop_tween.chain().tween_callback(_hide_pop)
+
+func _hide_pop() -> void:
+	if _pop_tween and _pop_tween.is_valid():
+		_pop_tween.kill()
+	_pop.visible = false
+
+## 1840 → "1,840".
+static func grouped(n: int) -> String:
+	var digits := str(absi(n))
+	var out := ""
+	while digits.length() > 3:
+		out = "," + digits.right(3) + out
+		digits = digits.left(-3)
+	return ("-" if n < 0 else "") + digits + out
 
 func _on_round_finished(score: int, total: int) -> void:
 	_overlay_title.text = "All done!" if score < total else "Perfect!"
 	_overlay_score.text = "%d / %d" % [score, total]
 	_overlay_missed.text = "Practice these:\n" + "      ".join(_missed) if not _missed.is_empty() else ""
+	var timed := GameState.current_round.timed
+	_overlay_points.visible = timed
+	_overlay_points.text = "%s points" % grouped(GameState.current_round.total_points()) if timed else ""
+	_overlay_best.visible = timed and GameState.new_best
+	_overlay_best.text = "New best!" if _overlay_best.visible else ""
+	_hide_pop()
 	_overlay.visible = true
